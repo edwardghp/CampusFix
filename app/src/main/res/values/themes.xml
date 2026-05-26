@@ -1,0 +1,8 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Tema base. La UI real se define en Compose (ui/theme/Theme.kt).
+         Este tema solo se usa para la ventana inicial. -->
+    <style name="Theme.CampusFix" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#1D4ED8</item>
+        <item name="android:windowBackground">#FFFFFF</item>
+    </style>
+</resources>
