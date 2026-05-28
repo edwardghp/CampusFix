@@ -14,6 +14,7 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** HU02 - Perfil de usuario en Firestore + foto de perfil en Firebase Storage. */
 @Singleton
 class ProfileRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore,

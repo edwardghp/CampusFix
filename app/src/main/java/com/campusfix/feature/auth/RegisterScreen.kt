@@ -40,6 +40,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.campusfix.domain.model.UserRole
 
+/** HU01 / HU02 - Registro de usuario con seleccion de rol. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
