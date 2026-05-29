@@ -15,6 +15,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+// Paleta de marca (azul universitario) - usada como respaldo si no hay color dinamico
 val BrandBlue = Color(0xFF1D4ED8)
 val BrandNavy = Color(0xFF1A2B4A)
 val BrandSky = Color(0xFF0EA5E9)

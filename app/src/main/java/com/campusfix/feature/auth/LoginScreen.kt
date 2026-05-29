@@ -41,6 +41,7 @@ import com.campusfix.R
 import com.campusfix.feature.auth.google.rememberGoogleSignIn
 import kotlinx.coroutines.launch
 
+/** HU01 - Pantalla de inicio de sesion (email/contrasena + Google). */
 @Composable
 fun LoginScreen(
     onLoggedIn: () -> Unit,

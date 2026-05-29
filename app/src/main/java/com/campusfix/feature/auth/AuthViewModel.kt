@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** Estado de la pantalla de autenticacion (patron MVVM + StateFlow). */
 data class AuthUiState(
     val loading: Boolean = false,
     val error: String? = null,
@@ -21,6 +22,7 @@ data class AuthUiState(
     val success: Boolean = false,
 )
 
+/** HU01 - ViewModel de login y registro. */
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,

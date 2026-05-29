@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.campusfix.domain.model.UserRole
 
+/** HU02 - Pantalla de perfil del usuario (datos institucionales + foto). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(

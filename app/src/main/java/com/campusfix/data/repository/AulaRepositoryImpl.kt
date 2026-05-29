@@ -12,6 +12,10 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * HU03 - Catalogo de aulas offline-first.
+ * La fuente de verdad para la UI es Room; Firestore solo se usa para sincronizar.
+ */
 @Singleton
 class AulaRepositoryImpl @Inject constructor(
     private val aulaDao: AulaDao,

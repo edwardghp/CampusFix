@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Room
 import com.campusfix.data.local.AppDatabase
 import com.campusfix.data.local.AulaDao
-import com.campusfix.data.local.TicketDao
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -19,6 +18,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+/** Modulo Hilt: provee Firebase y la base de datos Room a toda la app. */
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
@@ -39,6 +39,4 @@ object AppModule {
             .build()
 
     @Provides fun provideAulaDao(db: AppDatabase): AulaDao = db.aulaDao()
-
-    @Provides fun provideTicketDao(db: AppDatabase): TicketDao = db.ticketDao()
 }

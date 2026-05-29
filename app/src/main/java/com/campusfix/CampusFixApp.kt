@@ -6,6 +6,10 @@ import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
+/**
+ * Clase Application. Punto de entrada de Hilt (@HiltAndroidApp) y configuracion
+ * de WorkManager para que pueda inyectar dependencias en los Workers.
+ */
 @HiltAndroidApp
 class CampusFixApp : Application(), Configuration.Provider {
 

@@ -5,6 +5,10 @@ import android.media.MediaRecorder
 import android.os.Build
 import java.io.File
 
+/**
+ * Grabador de notas de voz (HU04). Usa MediaRecorder y guarda el audio
+ * en la carpeta de cache de la app. Maximo recomendado: 60 segundos.
+ */
 class AudioRecorder(private val context: Context) {
 
     private var recorder: MediaRecorder? = null

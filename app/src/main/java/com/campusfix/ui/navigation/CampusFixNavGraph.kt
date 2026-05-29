@@ -10,10 +10,11 @@ import com.campusfix.feature.auth.LoginScreen
 import com.campusfix.feature.auth.RegisterScreen
 import com.campusfix.feature.home.HomeScreen
 import com.campusfix.feature.profile.ProfileScreen
+import com.campusfix.feature.report.AulaPickerScreen
 import com.campusfix.feature.report.QrScanScreen
-import com.campusfix.feature.report.ReportScreen
 import com.google.firebase.auth.FirebaseAuth
 
+/** Grafo de navegacion de CampusFix. Define el flujo entre pantallas del Sprint 1. */
 @Composable
 fun CampusFixNavGraph() {
     val navController = rememberNavController()
@@ -56,36 +57,34 @@ fun CampusFixNavGraph() {
 
         composable(Routes.HOME) {
             HomeScreen(
-                onReportFault = { navController.navigate(Routes.QR_SCAN) },
+                // "Reportar falla" lleva a la pantalla de eleccion de aula
+                onReportFault = { navController.navigate(Routes.AULA_PICKER) },
                 onEditProfile = { navController.navigate(Routes.PROFILE) },
                 onLoggedOut = {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(0)
-                    }
+                    } 
                 },
+            )
+        }
+
+        // HU03 - Eleccion del aula: escanear QR o seleccionar de la lista
+        composable(Routes.AULA_PICKER) {
+            AulaPickerScreen(
+                onScanQr = { navController.navigate(Routes.QR_SCAN) },
+                onAulaSelected = { aulaId ->
+                    // Revertido HU04: Ya no navega al reporte
+                    navController.popBackStack()
+                },
+                onBack = { navController.popBackStack() },
             )
         }
 
         composable(Routes.QR_SCAN) {
             QrScanScreen(
                 onAulaDetected = { aulaId ->
-                    navController.navigate(Routes.report(aulaId)) {
-                        popUpTo(Routes.QR_SCAN) { inclusive = true }
-                    }
-                },
-                onBack = { navController.popBackStack() },
-            )
-        }
-
-        composable(
-            route = Routes.REPORT,
-            arguments = listOf(navArgument("aulaId") { type = NavType.StringType }),
-        ) {
-            ReportScreen(
-                onTicketSent = {
-                    navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.HOME) { inclusive = true }
-                    }
+                    // Revertido HU04: Ya no navega al reporte
+                    navController.popBackStack()
                 },
                 onBack = { navController.popBackStack() },
             )

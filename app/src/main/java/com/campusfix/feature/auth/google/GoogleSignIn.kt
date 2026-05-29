@@ -9,6 +9,14 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 
+/**
+ * HU01 - Ayudante para el inicio de sesion con Google.
+ *
+ * IMPORTANTE: reemplaza WEB_CLIENT_ID por el "Web client (auto created by
+ * Google Service)" que aparece en la consola de Firebase >
+ * Authentication > Sign-in method > Google, o en google-services.json
+ * (campo oauth_client con client_type 3).
+ */
 class GoogleSignInHelper(context: Context) {
 
     private val client: GoogleSignInClient
@@ -23,6 +31,7 @@ class GoogleSignInHelper(context: Context) {
 
     fun signInIntent(): Intent = client.signInIntent
 
+    /** Extrae el idToken del resultado para entregarlo a Firebase Auth. */
     fun extractIdToken(data: Intent?): String? = try {
         GoogleSignIn.getSignedInAccountFromIntent(data)
             .getResult(ApiException::class.java)
@@ -33,7 +42,7 @@ class GoogleSignInHelper(context: Context) {
 
     companion object {
         // TODO: reemplazar por el Web Client ID real del proyecto Firebase
-        private const val WEB_CLIENT_ID = "408094579154:android:cb40cac969209332ed100b.apps.googleusercontent.com"
+        private const val WEB_CLIENT_ID = "408094579154-dnvv6jbrcl8b3shq74aljqfi44b4tvkq.apps.googleusercontent.com"
     }
 }
 
