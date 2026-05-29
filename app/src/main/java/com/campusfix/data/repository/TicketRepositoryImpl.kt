@@ -20,6 +20,12 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * HU04 - Creacion de tickets offline-first.
+ * 1) Guarda el ticket en Room (estado: no sincronizado).
+ * 2) Encola un Worker que sube las fotos/audio a Storage y escribe en Firestore.
+ *    Si no hay red, WorkManager reintenta automaticamente cuando vuelve la conexion.
+ */
 @Singleton
 class TicketRepositoryImpl @Inject constructor(
     private val ticketDao: TicketDao,

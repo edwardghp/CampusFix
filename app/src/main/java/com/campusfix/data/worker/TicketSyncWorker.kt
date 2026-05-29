@@ -14,6 +14,14 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.tasks.await
 
+/**
+ * HU04 - Worker que sincroniza un ticket pendiente:
+ *  - Sube las fotos y el audio a Firebase Storage.
+ *  - Escribe el ticket en Cloud Firestore.
+ *  - Marca el ticket como sincronizado en Room.
+ *  - Muestra una notificacion local de confirmacion.
+ * Si falla (p. ej. sin red), devuelve retry() y WorkManager lo reintenta.
+ */
 @HiltWorker
 class TicketSyncWorker @AssistedInject constructor(
     @Assisted appContext: Context,

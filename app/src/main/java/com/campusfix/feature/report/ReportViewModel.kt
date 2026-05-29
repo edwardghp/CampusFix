@@ -31,6 +31,10 @@ data class ReportUiState(
     val sent: Boolean = false,
 )
 
+/**
+ * HU04 - ViewModel del formulario de reporte de falla.
+ * Recibe el id del aula como argumento de navegacion (SavedStateHandle).
+ */
 @HiltViewModel
 class ReportViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
