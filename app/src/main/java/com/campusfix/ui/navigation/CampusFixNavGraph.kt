@@ -13,6 +13,7 @@ import com.campusfix.feature.profile.ProfileScreen
 import com.campusfix.feature.report.AulaPickerScreen
 import com.campusfix.feature.report.QrScanScreen
 import com.google.firebase.auth.FirebaseAuth
+import com.campusfix.feature.report.ReportScreen
 
 /** Grafo de navegacion de CampusFix. Define el flujo entre pantallas del Sprint 1. */
 @Composable
@@ -73,8 +74,7 @@ fun CampusFixNavGraph() {
             AulaPickerScreen(
                 onScanQr = { navController.navigate(Routes.QR_SCAN) },
                 onAulaSelected = { aulaId ->
-                    // Revertido HU04: Ya no navega al reporte
-                    navController.popBackStack()
+                    navController.navigate(Routes.report(aulaId))
                 },
                 onBack = { navController.popBackStack() },
             )
@@ -83,8 +83,24 @@ fun CampusFixNavGraph() {
         composable(Routes.QR_SCAN) {
             QrScanScreen(
                 onAulaDetected = { aulaId ->
-                    // Revertido HU04: Ya no navega al reporte
-                    navController.popBackStack()
+                    navController.navigate(Routes.report(aulaId)) {
+                        // Quitar la pantalla de escaneo del back stack
+                        popUpTo(Routes.QR_SCAN) { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(
+            route = Routes.REPORT,
+            arguments = listOf(navArgument("aulaId") { type = NavType.StringType }),
+        ) {
+            ReportScreen(
+                onTicketSent = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
+                    }
                 },
                 onBack = { navController.popBackStack() },
             )

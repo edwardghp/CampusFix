@@ -26,3 +26,21 @@ interface AulaDao {
     @Query("SELECT COUNT(*) FROM aulas")
     suspend fun count(): Int
 }
+
+@Dao
+interface TicketDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(ticket: TicketEntity)
+
+    @Update
+    suspend fun update(ticket: TicketEntity)
+
+    @Query("SELECT * FROM tickets WHERE id = :id LIMIT 1")
+    suspend fun findById(id: String): TicketEntity?
+
+    @Query("SELECT * FROM tickets WHERE reportanteUid = :uid ORDER BY creadoEn DESC")
+    fun observeByUser(uid: String): Flow<List<TicketEntity>>
+
+    @Query("SELECT * FROM tickets WHERE sincronizado = 0")
+    suspend fun pendientes(): List<TicketEntity>
+}

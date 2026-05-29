@@ -5,7 +5,7 @@ import com.campusfix.domain.model.Aula
 import com.campusfix.domain.model.User
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
-
+import com.campusfix.domain.model.Ticket
 /* Interfaces de repositorio (capa domain). La capa data las implementa. */
 
 /** HU01 - Autenticacion con Firebase Auth. */
@@ -33,4 +33,11 @@ interface AulaRepository {
     suspend fun getById(aulaId: String): Aula?
     /** Descarga el catalogo desde Firestore y lo guarda en Room. */
     suspend fun syncAulas(): Result<Unit>
+}
+
+/** HU04 - Creacion y consulta de tickets. */
+interface TicketRepository {
+    /** Guarda el ticket localmente (Room) y encola su envio con WorkManager. */
+    suspend fun createTicket(ticket: Ticket, photos: List<Uri>, audio: Uri?): Result<String>
+    fun observeMyTickets(uid: String): Flow<List<Ticket>>
 }

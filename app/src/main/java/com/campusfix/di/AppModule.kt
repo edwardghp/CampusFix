@@ -17,7 +17,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
-
+import com.campusfix.data.local.TicketDao
 /** Modulo Hilt: provee Firebase y la base de datos Room a toda la app. */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -39,4 +39,5 @@ object AppModule {
             .build()
 
     @Provides fun provideAulaDao(db: AppDatabase): AulaDao = db.aulaDao()
+    @Provides fun provideTicketDao(db: AppDatabase): TicketDao = db.ticketDao()
 }

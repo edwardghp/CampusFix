@@ -36,3 +36,42 @@ data class Aula(
     val edificio: String = "",
     val qrCode: String = "",
 )
+
+/** Categoria de la falla reportada (HU03). */
+enum class FaultCategory(val label: String) {
+    PROYECTOR("Proyector"),
+    RED("Red / Internet"),
+    PC("Computadora"),
+    CLIMATIZACION("Climatizacion"),
+    OTRO("Otro"),
+}
+
+/** Nivel de urgencia del ticket. En el Sprint 2 la IA lo sugiere automaticamente. */
+enum class Urgency(val label: String) {
+    ALTA("Alta"), MEDIA("Media"), BAJA("Baja"),
+}
+
+/** Estado del ticket (el ciclo completo se gestiona en Sprints 2 y 3). */
+enum class TicketStatus(val label: String) {
+    ABIERTO("Abierto"),
+    ASIGNADO("Asignado"),
+    EN_ATENCION("En atencion"),
+    RESUELTO("Resuelto"),
+    CERRADO("Cerrado"),
+}
+
+/** Ticket de incidencia (HU04). */
+data class Ticket(
+    val id: String = "",
+    val aulaId: String = "",
+    val aulaNombre: String = "",
+    val categoria: FaultCategory = FaultCategory.OTRO,
+    val urgencia: Urgency = Urgency.MEDIA,
+    val descripcion: String = "",
+    val fotoUrls: List<String> = emptyList(),
+    val audioUrl: String = "",
+    val reportanteUid: String = "",
+    val estado: TicketStatus = TicketStatus.ABIERTO,
+    val creadoEn: Long = System.currentTimeMillis(),
+    val sincronizado: Boolean = false,
+)
