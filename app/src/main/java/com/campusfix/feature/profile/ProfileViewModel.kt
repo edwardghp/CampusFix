@@ -22,6 +22,7 @@ data class ProfileUiState(
     val saved: Boolean = false,
 )
 
+/** HU02 - ViewModel del perfil de usuario. */
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,

@@ -26,6 +26,11 @@ data class QrScanUiState(
     val aulaId: String? = null,
     val message: String? = null,
 )
+
+/**
+ * HU03 - ViewModel del escaneo. Conecta CameraX con ML Kit Barcode Scanning
+ * y resuelve el codigo QR contra el catalogo local de aulas (Room).
+ */
 @HiltViewModel
 class QrScanViewModel @Inject constructor(
     private val aulaRepository: AulaRepository,
