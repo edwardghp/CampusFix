@@ -2,10 +2,12 @@ package com.campusfix.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.campusfix.domain.model.Ticket
 import com.campusfix.domain.model.User
 import com.campusfix.domain.repository.AuthRepository
 import com.campusfix.domain.repository.AulaRepository
 import com.campusfix.domain.repository.ProfileRepository
+import com.campusfix.domain.repository.TicketRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +18,7 @@ import javax.inject.Inject
 
 data class HomeUiState(
     val user: User = User(),
+    val tickets: List<Ticket> = emptyList(),
     val loading: Boolean = true,
 )
 
@@ -24,6 +27,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val profileRepository: ProfileRepository,
+    private val ticketRepository: TicketRepository,
     private val aulaRepository: AulaRepository,
 ) : ViewModel() {
 
@@ -37,6 +41,12 @@ class HomeViewModel @Inject constructor(
             viewModelScope.launch {
                 profileRepository.observeProfile(fbUser.uid).collect { user ->
                     _state.update { it.copy(user = user ?: User(uid = fbUser.uid), loading = false) }
+                }
+            }
+            // Tickets del usuario (offline-first desde Room)
+            viewModelScope.launch {
+                ticketRepository.observeMyTickets(fbUser.uid).collect { tickets ->
+                    _state.update { it.copy(tickets = tickets) }
                 }
             }
             // Sincronizar catalogo de aulas en segundo plano (HU03)
