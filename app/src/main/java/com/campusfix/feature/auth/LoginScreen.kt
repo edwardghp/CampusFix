@@ -56,14 +56,16 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    // Configuracion de Google Sign-In (ver feature/auth/google/GoogleSignIn.kt)
+    // Configuracion de Google Sign-In con Credential Manager
+    // (ver feature/auth/google/GoogleSignIn.kt)
     val googleClient = rememberGoogleSignIn(context)
-    val googleLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val idToken = googleClient.extractIdToken(result.data)
-        if (idToken != null) viewModel.loginWithGoogle(idToken)
-        else scope.launch { snackbar.showSnackbar("No se pudo obtener la cuenta de Google") }
+
+    fun onGoogleClick() {
+        scope.launch {
+            val idToken = googleClient.getIdToken()
+            if (idToken != null) viewModel.loginWithGoogle(idToken)
+            else snackbar.showSnackbar("No se pudo obtener la cuenta de Google")
+        }
     }
 
     LaunchedEffect(state.success) { if (state.success) onLoggedIn() }
@@ -127,7 +129,7 @@ fun LoginScreen(
 
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
-                onClick = { googleLauncher.launch(googleClient.signInIntent()) },
+                onClick = { onGoogleClick() },
                 enabled = !state.loading,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Continuar con Google") }

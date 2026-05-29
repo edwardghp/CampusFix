@@ -81,6 +81,11 @@ dependencies {
     implementation(libs.play.services.auth)
     implementation(libs.coroutines.play.services)
 
+    // Sign in with Google via Credential Manager (reemplaza GoogleSignIn deprecado)
+    implementation("androidx.credentials:credentials:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+
     // CameraX + ML Kit (QR y foto)
     implementation(libs.camera.core)
     implementation(libs.camera.camera2)
