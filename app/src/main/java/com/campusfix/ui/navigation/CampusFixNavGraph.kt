@@ -63,7 +63,7 @@ fun CampusFixNavGraph() {
                 onLoggedOut = {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(0)
-                    }
+                    } 
                 },
             )
         }
