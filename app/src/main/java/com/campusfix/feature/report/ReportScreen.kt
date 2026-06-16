@@ -57,6 +57,10 @@ import com.campusfix.data.util.AudioRecorder
 import com.campusfix.domain.model.FaultCategory
 import com.campusfix.domain.model.Urgency
 import java.io.File
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.AutoAwesome
+
 import androidx.compose.ui.tooling.preview.Preview
 /** HU04 - Formulario de reporte: categoria, urgencia, descripcion, fotos y audio. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -170,6 +174,76 @@ fun ReportScreen(
                 minLines = 3,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            // ============ HU05 - Diagnostico automatico con IA ============
+            OutlinedButton(
+                onClick = { viewModel.diagnosticarConIA() },
+                enabled = !state.diagnosticando && state.descripcion.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (state.diagnosticando) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.size(8.dp))
+                    Text("Analizando con IA...")
+                } else {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null)
+                    Spacer(Modifier.size(8.dp))
+                    Text("Diagnosticar con IA")
+                }
+            }
+
+            // Tarjeta con la sugerencia de la IA (aparece cuando hay resultado)
+            state.diagnostico?.let { diag ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Row {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null)
+                            Spacer(Modifier.size(8.dp))
+                            Text(
+                                "Sugerencia de la IA",
+                                style = MaterialTheme.typography.titleLarge,
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Categoria sugerida: ${diag.categoria.label}",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            "Urgencia sugerida: ${diag.urgencia.label}",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            diag.diagnostico,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = { viewModel.aplicarDiagnostico() }) {
+                                Text("Aplicar sugerencia")
+                            }
+                            TextButton(onClick = { viewModel.descartarDiagnostico() }) {
+                                Text("Descartar")
+                            }
+                        }
+                        if (state.diagnosticoAplicado) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "Sugerencia aplicada. Puedes ajustarla manualmente si lo deseas.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+            }
+            // ============ Fin HU05 ============
 
             // Fotos (HU04)
             Text("Fotos (maximo 3)", style = MaterialTheme.typography.titleLarge)

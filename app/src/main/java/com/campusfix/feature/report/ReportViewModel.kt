@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.campusfix.domain.model.DiagnosticoIA
+import com.campusfix.domain.usecase.DiagnosticarFallaUseCase
 
 data class ReportUiState(
     val aula: Aula? = null,
@@ -29,6 +31,10 @@ data class ReportUiState(
     val sending: Boolean = false,
     val error: String? = null,
     val sent: Boolean = false,
+    // ---- HU05: diagnostico con IA ----
+    val diagnosticando: Boolean = false,          // indicador de carga de la IA
+    val diagnostico: DiagnosticoIA? = null,        // sugerencia devuelta por la IA
+    val diagnosticoAplicado: Boolean = false,      // el usuario acepto la
 )
 
 /**
@@ -41,6 +47,7 @@ class ReportViewModel @Inject constructor(
     private val aulaRepository: AulaRepository,
     private val ticketRepository: TicketRepository,
     private val authRepository: AuthRepository,
+    private val diagnosticarFallaUseCase: DiagnosticarFallaUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ReportUiState())
@@ -73,6 +80,47 @@ class ReportViewModel @Inject constructor(
     fun removeFoto(uri: Uri) = _state.update { it.copy(fotos = it.fotos - uri) }
 
     fun setAudio(uri: Uri?) = _state.update { it.copy(audio = uri) }
+
+    /* ===================== HU05: Diagnostico con IA ===================== */
+
+    /**
+     * Envia la descripcion y la primera foto (si existe) a la IA para que
+     * sugiera categoria, urgencia y un diagnostico breve.
+     */
+    fun diagnosticarConIA() {
+        val s = _state.value
+        if (s.diagnosticando) return
+        viewModelScope.launch {
+            _state.update { it.copy(diagnosticando = true, error = null, diagnostico = null) }
+            val foto = s.fotos.firstOrNull()
+            diagnosticarFallaUseCase(s.descripcion.trim(), foto)
+                .onSuccess { diag ->
+                    _state.update { it.copy(diagnosticando = false, diagnostico = diag) }
+                }
+                .onFailure { e ->
+                    _state.update {
+                        it.copy(diagnosticando = false, error = e.message ?: "Error en el diagnostico")
+                    }
+                }
+        }
+    }
+
+    /** El usuario acepta la sugerencia de la IA: se aplica a los campos del formulario. */
+    fun aplicarDiagnostico() {
+        val diag = _state.value.diagnostico ?: return
+        _state.update {
+            it.copy(
+                categoria = diag.categoria,
+                urgencia = diag.urgencia,
+                diagnosticoAplicado = true,
+            )
+        }
+    }
+
+    /** El usuario descarta la sugerencia para clasificar manualmente. */
+    fun descartarDiagnostico() {
+        _state.update { it.copy(diagnostico = null, diagnosticoAplicado = false) }
+    }
 
     fun send() {
         val s = _state.value
