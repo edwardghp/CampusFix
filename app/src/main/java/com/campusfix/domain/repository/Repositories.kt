@@ -26,6 +26,16 @@ interface ProfileRepository {
     suspend fun uploadProfilePhoto(uid: String, photo: Uri): Result<String>
 }
 
+/** HU06 - Gestion de usuarios y tecnicos. */
+interface UserRepository {
+    /** Obtiene la lista de todos los tecnicos registrados. */
+    fun observeTechnicians(): Flow<List<User>>
+    /** Actualiza el estado activo/inactivo de un tecnico. */
+    suspend fun updateTechnicianStatus(uid: String, active: Boolean): Result<Unit>
+    /** Actualiza el token FCM del usuario actual. */
+    suspend fun updateFcmToken(uid: String, token: String): Result<Unit>
+}
+
 /** HU03 - Catalogo de aulas (offline-first con Room). */
 interface AulaRepository {
     fun observeAulas(): Flow<List<Aula>>
@@ -40,4 +50,10 @@ interface TicketRepository {
     /** Guarda el ticket localmente (Room) y encola su envio con WorkManager. */
     suspend fun createTicket(ticket: Ticket, photos: List<Uri>, audio: Uri?): Result<String>
     fun observeMyTickets(uid: String): Flow<List<Ticket>>
+    /** HU06 - Observa todos los tickets abiertos para el coordinador. */
+    fun observeOpenTickets(): Flow<List<Ticket>>
+    /** HU06 - Asigna un ticket a un tecnico. */
+    suspend fun assignTicket(ticketId: String, technician: User): Result<Unit>
+    /** HU06 - Observa los tickets asignados a un tecnico. */
+    fun observeAssignedTickets(uid: String): Flow<List<Ticket>>
 }

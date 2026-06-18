@@ -14,6 +14,9 @@ import com.campusfix.feature.report.AulaPickerScreen
 import com.campusfix.feature.report.QrScanScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.campusfix.feature.report.ReportScreen
+import com.campusfix.feature.admin.AssignmentScreen
+import com.campusfix.feature.admin.TechManagementScreen
+import com.campusfix.feature.technician.AssignedTicketsScreen
 
 /** Grafo de navegacion de CampusFix. Define el flujo entre pantallas del Sprint 1. */
 @Composable
@@ -66,6 +69,30 @@ fun CampusFixNavGraph() {
                         popUpTo(0)
                     } 
                 },
+                onGoToAssignment = { navController.navigate(Routes.ASSIGNMENT) },
+                onGoToTechManagement = { navController.navigate(Routes.TECH_MANAGEMENT) },
+                onGoToAssignedTickets = { navController.navigate(Routes.ASSIGNED_TICKETS) },
+            )
+        }
+
+        // HU06 - Asignacion de tickets
+        composable(Routes.ASSIGNMENT) {
+            AssignmentScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // HU06 - Gestion de tecnicos
+        composable(Routes.TECH_MANAGEMENT) {
+            TechManagementScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // HU06 - Tickets asignados al tecnico
+        composable(Routes.ASSIGNED_TICKETS) {
+            AssignedTicketsScreen(
+                onBack = { navController.popBackStack() }
             )
         }
 

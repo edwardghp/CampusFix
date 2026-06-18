@@ -11,11 +11,21 @@ import androidx.work.workDataOf
 import com.campusfix.data.local.TicketDao
 import com.campusfix.data.local.TicketEntity
 import com.campusfix.data.worker.TicketSyncWorker
+import com.campusfix.data.util.FcmSender
 import com.campusfix.domain.model.Ticket
 import com.campusfix.domain.repository.TicketRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import com.campusfix.core.Constants
+import com.campusfix.domain.model.TicketStatus
+import com.campusfix.domain.model.User
+import com.campusfix.domain.model.FaultCategory
+import com.campusfix.domain.model.Urgency
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,6 +39,8 @@ import javax.inject.Singleton
 @Singleton
 class TicketRepositoryImpl @Inject constructor(
     private val ticketDao: TicketDao,
+    private val firestore: FirebaseFirestore,
+    private val fcmSender: FcmSender,
     @ApplicationContext private val context: Context,
 ) : TicketRepository {
 
@@ -49,6 +61,9 @@ class TicketRepositoryImpl @Inject constructor(
             fotosLocales = photos.joinToString("|") { it.toString() },
             audioLocal = audio?.toString() ?: "",
             reportanteUid = ticket.reportanteUid,
+            tecnicoId = ticket.tecnicoId,
+            tecnicoNombre = ticket.tecnicoNombre,
+            fechaAsignacion = ticket.fechaAsignacion,
             estado = ticket.estado,
             creadoEn = ticket.creadoEn,
             sincronizado = false,
@@ -72,4 +87,101 @@ class TicketRepositoryImpl @Inject constructor(
 
     override fun observeMyTickets(uid: String): Flow<List<Ticket>> =
         ticketDao.observeByUser(uid).map { list -> list.map { it.toDomain() } }
+
+    override fun observeOpenTickets(): Flow<List<Ticket>> = callbackFlow {
+        val listener = firestore.collection(Constants.COL_TICKETS)
+            .whereEqualTo("estado", TicketStatus.ABIERTO.name)
+            .addSnapshotListener { snap, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val tickets = snap?.documents?.mapNotNull { doc ->
+                    try {
+                        Ticket(
+                            id = doc.id,
+                            aulaId = doc.getString("aulaId") ?: "",
+                            aulaNombre = doc.getString("aulaNombre") ?: "",
+                            categoria = FaultCategory.valueOf(doc.getString("categoria") ?: "OTRO"),
+                            urgencia = Urgency.valueOf(doc.getString("urgencia") ?: "MEDIA"),
+                            descripcion = doc.getString("descripcion") ?: "",
+                            fotoUrls = (doc.get("fotoUrls") as? List<String>) ?: emptyList(),
+                            audioUrl = doc.getString("audioUrl") ?: "",
+                            reportanteUid = doc.getString("reportanteUid") ?: "",
+                            estado = TicketStatus.valueOf(doc.getString("estado") ?: "ABIERTO"),
+                            creadoEn = doc.getLong("creadoEn") ?: 0L,
+                            sincronizado = true
+                        )
+                    } catch (e: Exception) { null }
+                } ?: emptyList()
+                trySend(tickets)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    override suspend fun assignTicket(ticketId: String, technician: User): Result<Unit> = runCatching {
+        val update = mapOf(
+            "tecnicoId" to technician.uid,
+            "tecnicoNombre" to technician.nombre,
+            "fechaAsignacion" to System.currentTimeMillis(),
+            "estado" to TicketStatus.ASIGNADO.name
+        )
+        firestore.collection(Constants.COL_TICKETS).document(ticketId)
+            .update(update)
+            .await()
+        
+        // Tambien actualizamos Room si el ticket existe localmente
+        ticketDao.findById(ticketId)?.let { entity ->
+            ticketDao.update(entity.copy(
+                tecnicoId = technician.uid,
+                tecnicoNombre = technician.nombre,
+                fechaAsignacion = System.currentTimeMillis(),
+                estado = TicketStatus.ASIGNADO,
+                sincronizado = true
+            ))
+        }
+
+        // --- HU06: Notificación Push Automática ---
+        if (technician.fcmToken.isNotBlank()) {
+            fcmSender.sendNotification(
+                token = technician.fcmToken,
+                title = "Nueva tarea asignada",
+                body = "Se te ha asignado un reporte en ${technician.nombre}. Revisa 'Mis tareas'."
+            )
+        }
+    }
+
+    override fun observeAssignedTickets(uid: String): Flow<List<Ticket>> = callbackFlow {
+        val listener = firestore.collection(Constants.COL_TICKETS)
+            .whereEqualTo("tecnicoId", uid)
+            .addSnapshotListener { snap, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val tickets = snap?.documents?.mapNotNull { doc ->
+                    try {
+                        Ticket(
+                            id = doc.id,
+                            aulaId = doc.getString("aulaId") ?: "",
+                            aulaNombre = doc.getString("aulaNombre") ?: "",
+                            categoria = FaultCategory.valueOf(doc.getString("categoria") ?: "OTRO"),
+                            urgencia = Urgency.valueOf(doc.getString("urgencia") ?: "MEDIA"),
+                            descripcion = doc.getString("descripcion") ?: "",
+                            fotoUrls = (doc.get("fotoUrls") as? List<String>) ?: emptyList(),
+                            audioUrl = doc.getString("audioUrl") ?: "",
+                            reportanteUid = doc.getString("reportanteUid") ?: "",
+                            tecnicoId = doc.getString("tecnicoId"),
+                            tecnicoNombre = doc.getString("tecnicoNombre"),
+                            fechaAsignacion = doc.getLong("fechaAsignacion"),
+                            estado = TicketStatus.valueOf(doc.getString("estado") ?: "ASIGNADO"),
+                            creadoEn = doc.getLong("creadoEn") ?: 0L,
+                            sincronizado = true
+                        )
+                    } catch (e: Exception) { null }
+                } ?: emptyList()
+                trySend(tickets)
+            }
+        awaitClose { listener.remove() }
+    }
 }

@@ -19,6 +19,7 @@ coroutinesPlayServices = "1.9.0"
 camerax = "1.4.1"
 mlkitBarcode = "17.3.0"
 coil = "2.7.0"
+google-auth = "1.24.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -56,6 +57,7 @@ camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "
 mlkit-barcode = { group = "com.google.mlkit", name = "barcode-scanning", version.ref = "mlkitBarcode" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version = "21.3.0" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+google-auth-library = { group = "com.google.auth", name = "google-auth-library-oauth2-http", version.ref = "google-auth" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

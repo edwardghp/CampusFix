@@ -60,6 +60,7 @@ class AuthViewModel @Inject constructor(
                         email = email.trim(),
                         nombre = nombre.trim(),
                         rol = rol,
+                        activo = (rol != UserRole.TECNICO)
                     )
                     profileRepository.saveProfile(perfil)
                     _state.update {

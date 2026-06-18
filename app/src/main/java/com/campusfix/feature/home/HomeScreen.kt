@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -33,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.campusfix.domain.model.Ticket
+import com.campusfix.domain.model.UserRole
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -44,6 +47,9 @@ fun HomeScreen(
     onReportFault: () -> Unit,
     onEditProfile: () -> Unit,
     onLoggedOut: () -> Unit,
+    onGoToAssignment: () -> Unit,
+    onGoToTechManagement: () -> Unit,
+    onGoToAssignedTickets: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -53,6 +59,19 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("CampusFix") },
                 actions = {
+                    if (state.user.rol == UserRole.COORDINADOR) {
+                        IconButton(onClick = onGoToTechManagement) {
+                            Icon(Icons.Default.People, contentDescription = "Gestionar técnicos")
+                        }
+                        IconButton(onClick = onGoToAssignment) {
+                            Icon(Icons.Default.Assignment, contentDescription = "Asignar tickets")
+                        }
+                    }
+                    if (state.user.rol == UserRole.TECNICO) {
+                        IconButton(onClick = onGoToAssignedTickets) {
+                            Icon(Icons.Default.Assignment, contentDescription = "Mis tareas")
+                        }
+                    }
                     IconButton(onClick = onEditProfile) {
                         Icon(Icons.Default.Person, contentDescription = "Perfil")
                     }

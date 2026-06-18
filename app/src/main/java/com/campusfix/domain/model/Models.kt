@@ -25,6 +25,8 @@ data class User(
     val cargo: String = "",
     val fotoUrl: String = "",
     val activo: Boolean = true,
+    val especialidad: FaultCategory? = null,
+    val fcmToken: String = "",
 )
 
 /** Aula de la facultad (HU03). El catalogo se guarda offline en Room. */
@@ -71,6 +73,9 @@ data class Ticket(
     val fotoUrls: List<String> = emptyList(),
     val audioUrl: String = "",
     val reportanteUid: String = "",
+    val tecnicoId: String? = null,
+    val tecnicoNombre: String? = null,
+    val fechaAsignacion: Long? = null,
     val estado: TicketStatus = TicketStatus.ABIERTO,
     val creadoEn: Long = System.currentTimeMillis(),
     val sincronizado: Boolean = false,

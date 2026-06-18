@@ -6,12 +6,14 @@ import androidx.lifecycle.viewModelScope
 import com.campusfix.domain.model.User
 import com.campusfix.domain.repository.AuthRepository
 import com.campusfix.domain.repository.ProfileRepository
+import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 data class ProfileUiState(
@@ -27,6 +29,7 @@ data class ProfileUiState(
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val profileRepository: ProfileRepository,
+    private val messaging: FirebaseMessaging,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProfileUiState())
@@ -41,11 +44,27 @@ class ProfileViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
+            // Obtener el token FCM para notificaciones push (HU06)
+            val token = try { messaging.token.await() } catch(e: Exception) { "" }
+            
             profileRepository.observeProfile(fbUser.uid).collect { user ->
+                val fbProfile = user ?: User(uid = fbUser.uid, email = fbUser.email ?: "")
+                val updatedUser = fbProfile.copy(
+                    fcmToken = if (token.isNotEmpty()) token else fbProfile.fcmToken
+                )
+                
                 _state.update {
                     it.copy(
                         loading = false,
-                        user = user ?: User(uid = fbUser.uid, email = fbUser.email ?: ""),
+                        // Mezclamos: datos fijos (rol, activo, email, token) de Firestore, 
+                        // pero mantenemos los campos editables si ya fueron cargados una vez.
+                        user = if (it.loading) updatedUser else it.user.copy(
+                            rol = updatedUser.rol,
+                            activo = updatedUser.activo,
+                            email = updatedUser.email,
+                            fcmToken = updatedUser.fcmToken,
+                            especialidad = updatedUser.especialidad
+                        ),
                     )
                 }
             }

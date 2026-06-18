@@ -41,6 +41,9 @@ interface TicketDao {
     @Query("SELECT * FROM tickets WHERE reportanteUid = :uid ORDER BY creadoEn DESC")
     fun observeByUser(uid: String): Flow<List<TicketEntity>>
 
+    @Query("SELECT * FROM tickets WHERE tecnicoId = :uid ORDER BY creadoEn DESC")
+    fun observeByTechnician(uid: String): Flow<List<TicketEntity>>
+
     @Query("SELECT * FROM tickets WHERE sincronizado = 0")
     suspend fun pendientes(): List<TicketEntity>
 }

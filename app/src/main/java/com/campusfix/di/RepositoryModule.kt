@@ -3,6 +3,8 @@ package com.campusfix.di
 import com.campusfix.data.repository.AuthRepositoryImpl
 import com.campusfix.data.repository.AulaRepositoryImpl
 import com.campusfix.data.repository.ProfileRepositoryImpl
+import com.campusfix.data.repository.UserRepositoryImpl
+import com.campusfix.domain.repository.UserRepository
 import com.campusfix.domain.repository.AuthRepository
 import com.campusfix.domain.repository.AulaRepository
 import com.campusfix.domain.repository.ProfileRepository
@@ -29,4 +31,6 @@ abstract class RepositoryModule {
     abstract fun bindAulaRepository(impl: AulaRepositoryImpl): AulaRepository
     @Binds @Singleton
     abstract fun bindTicketRepository(impl: TicketRepositoryImpl): TicketRepository
+    @Binds @Singleton
+    abstract fun bindUserRepository(impl: UserRepositoryImpl): UserRepository
 }

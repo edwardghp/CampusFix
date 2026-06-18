@@ -2,6 +2,7 @@ package com.campusfix.data.repository
 
 import android.net.Uri
 import com.campusfix.core.Constants
+import com.campusfix.domain.model.FaultCategory
 import com.campusfix.domain.model.User
 import com.campusfix.domain.model.UserRole
 import com.campusfix.domain.repository.ProfileRepository
@@ -30,8 +31,9 @@ class ProfileRepositoryImpl @Inject constructor(
             "facultad" to user.facultad,
             "cargo" to user.cargo,
             "fotoUrl" to user.fotoUrl,
-            // Los tecnicos quedan inactivos hasta que el coordinador los valida (Sprint 2)
-            "activo" to (user.rol != UserRole.TECNICO),
+            "activo" to user.activo,
+            "especialidad" to user.especialidad?.name,
+            "fcmToken" to user.fcmToken,
         )
         firestore.collection(Constants.COL_USERS).document(user.uid).set(data).await()
     }
@@ -50,7 +52,11 @@ class ProfileRepositoryImpl @Inject constructor(
                         facultad = snap.getString("facultad") ?: "",
                         cargo = snap.getString("cargo") ?: "",
                         fotoUrl = snap.getString("fotoUrl") ?: "",
-                        activo = snap.getBoolean("activo") ?: true,
+                        activo = snap.getBoolean("activo") ?: false,
+                        especialidad = snap.getString("especialidad")?.let {
+                            try { FaultCategory.valueOf(it) } catch (e: Exception) { null }
+                        },
+                        fcmToken = snap.getString("fcmToken") ?: "",
                     )
                 )
             } else trySend(null)

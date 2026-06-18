@@ -38,6 +38,9 @@ data class TicketEntity(
     /** Ruta local del audio pendiente de subir */
     val audioLocal: String,
     val reportanteUid: String,
+    val tecnicoId: String? = null,
+    val tecnicoNombre: String? = null,
+    val fechaAsignacion: Long? = null,
     val estado: TicketStatus,
     val creadoEn: Long,
     val sincronizado: Boolean,
@@ -45,6 +48,7 @@ data class TicketEntity(
     fun toDomain() = Ticket(
         id = id, aulaId = aulaId, aulaNombre = aulaNombre, categoria = categoria,
         urgencia = urgencia, descripcion = descripcion, reportanteUid = reportanteUid,
+        tecnicoId = tecnicoId, tecnicoNombre = tecnicoNombre, fechaAsignacion = fechaAsignacion,
         estado = estado, creadoEn = creadoEn, sincronizado = sincronizado,
     )
 }

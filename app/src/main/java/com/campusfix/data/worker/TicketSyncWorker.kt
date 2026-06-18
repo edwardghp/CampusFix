@@ -64,6 +64,9 @@ class TicketSyncWorker @AssistedInject constructor(
                 "fotoUrls" to fotoUrls,
                 "audioUrl" to audioUrl,
                 "reportanteUid" to ticket.reportanteUid,
+                "tecnicoId" to ticket.tecnicoId,
+                "tecnicoNombre" to ticket.tecnicoNombre,
+                "fechaAsignacion" to ticket.fechaAsignacion,
                 "estado" to ticket.estado.name,
                 "creadoEn" to ticket.creadoEn,
             )
