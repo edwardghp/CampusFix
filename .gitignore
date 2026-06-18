@@ -10,3 +10,7 @@
 app/build
 # IMPORTANTE: google-services.json contiene claves del proyecto Firebase
 app/google-services.json
+
+# FCM Secrets
+fcm_config.json
+**/assets/fcm_config.json
