@@ -15,6 +15,8 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import com.campusfix.data.repository.TicketRepositoryImpl
 import com.campusfix.domain.repository.TicketRepository
+import com.campusfix.data.repository.DiagnosticoRepositoryImpl
+import com.campusfix.domain.repository.DiagnosticoRepository
 
 /** Modulo Hilt: enlaza cada interfaz de repositorio con su implementacion. */
 @Module
@@ -33,4 +35,8 @@ abstract class RepositoryModule {
     abstract fun bindTicketRepository(impl: TicketRepositoryImpl): TicketRepository
     @Binds @Singleton
     abstract fun bindUserRepository(impl: UserRepositoryImpl): UserRepository
+
+    @Binds @Singleton
+    abstract fun bindDiagnosticoRepository(impl: DiagnosticoRepositoryImpl): DiagnosticoRepository
+
 }

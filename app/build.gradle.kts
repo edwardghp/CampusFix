@@ -11,6 +11,17 @@ plugins {
     alias(libs.plugins.google.services)
 }
 
+// HU05 - Se lee la clave de la API de Gemini desde local.properties para no
+val geminiApiKey: String =
+    project.rootProject.file("local.properties")
+        .takeIf { it.exists() }
+        ?.readLines()
+        ?.firstOrNull { it.startsWith("GEMINI_API_KEY=") }
+        ?.substringAfter("=")
+        ?.trim()
+        ?: ""
+
+
 android {
     namespace = "com.campusfix"
     compileSdk = 35
@@ -22,6 +33,8 @@ android {
         versionCode = 1
         versionName = "1.0-sprint1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Clave de la API de Gemini disponible en BuildConfig.GEMINI_API_KEY
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
     }
 
     buildTypes {
@@ -35,7 +48,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -105,4 +121,12 @@ dependencies {
 
     // Autenticacion Google FCM V1
     implementation(libs.google.auth.library)
+
+    // HU05 - Retrofit + OkHttp + Gson para la API de Gemini (IA)
+    // Declarados con strings directos para no depender del catalogo de versiones.
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.google.code.gson:gson:2.11.0")
+
 }
