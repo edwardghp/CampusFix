@@ -6,7 +6,7 @@ import androidx.room.TypeConverters
 /** Base de datos SQLite local (Room). Offline-first para aulas. */
 @Database(
     entities = [AulaEntity::class, TicketEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)

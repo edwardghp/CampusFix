@@ -143,6 +143,8 @@ class ReportViewModel @Inject constructor(
             val ticket = Ticket(
                 aulaId = aula.id,
                 aulaNombre = "${aula.codigo} - ${aula.nombre}",
+                aulaLat = aula.latitud,
+                aulaLng = aula.longitud,
                 categoria = s.categoria,
                 urgencia = s.urgencia,
                 descripcion = s.descripcion.trim(),

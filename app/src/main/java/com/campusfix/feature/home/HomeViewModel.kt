@@ -43,9 +43,16 @@ class HomeViewModel @Inject constructor(
                     _state.update { it.copy(user = user ?: User(uid = fbUser.uid), loading = false) }
                 }
             }
-            // Tickets del usuario (offline-first desde Room)
+            // HU07 - Tickets del usuario en tiempo real (listener de Firestore).
+            // Si no hay red, el listener simplemente no emite y seguimos viendo lo que
+            // ya cargo observeMyTickets (Room) como respaldo offline-first.
             viewModelScope.launch {
                 ticketRepository.observeMyTickets(fbUser.uid).collect { tickets ->
+                    _state.update { it.copy(tickets = tickets) }
+                }
+            }
+            viewModelScope.launch {
+                ticketRepository.observeMyTicketsRealtime(fbUser.uid).collect { tickets ->
                     _state.update { it.copy(tickets = tickets) }
                 }
             }
