@@ -45,8 +45,6 @@ import com.campusfix.domain.model.UserRole
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.campusfix.domain.model.TicketStatus
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.foundation.clickable
 

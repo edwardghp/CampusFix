@@ -62,8 +62,13 @@ interface TicketRepository {
     suspend fun assignTicket(ticketId: String, technician: User): Result<Unit>
     /** HU07 - Observa los tickets asignados a un tecnico (cola del tecnico), con cache en Room. */
     fun observeAssignedTickets(uid: String): Flow<List<Ticket>>
+    /** HU07 - El tecnico avanza el estado del ticket; notifica al reportante por FCM. */
+    suspend fun updateTicketStatus(ticketId: String, nuevoEstado: TicketStatus): Result<Unit>
     /** HU08 - Obtiene un ticket puntual (para la pantalla de cierre del tecnico). */
     suspend fun getTicketById(ticketId: String): Ticket?
+
+    /** HU07 - Seguimiento en tiempo real de UN ticket puntual para el reportante (listener + fallback Room). */
+    fun observeTicketRealtime(ticketId: String): Flow<Ticket?>
 
     /**
      * HU08 - Registra la solucion aplicada por el tecnico: sube la foto de evidencia

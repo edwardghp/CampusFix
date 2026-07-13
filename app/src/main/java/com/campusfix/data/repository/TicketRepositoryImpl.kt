@@ -195,6 +195,24 @@ class TicketRepositoryImpl @Inject constructor(
         notificarReportante(ticketId, TicketStatus.ASIGNADO)
     }
 
+    /** HU07 - Notifica por FCM al reportante que el estado de su ticket cambio. */
+    private suspend fun notificarReportante(ticketId: String, nuevoEstado: TicketStatus) {
+        val ticketDoc = firestore.collection(Constants.COL_TICKETS).document(ticketId).get().await()
+        val reportanteUid = ticketDoc.getString("reportanteUid") ?: return
+        val aulaNombre = ticketDoc.getString("aulaNombre") ?: "tu aula"
+        if (reportanteUid.isBlank()) return
+
+        val reportanteDoc = firestore.collection(Constants.COL_USERS).document(reportanteUid).get().await()
+        val fcmToken = reportanteDoc.getString("fcmToken") ?: ""
+        if (fcmToken.isBlank()) return
+
+        fcmSender.sendNotification(
+            token = fcmToken,
+            title = "Tu reporte cambio de estado",
+            body = "Tu reporte en $aulaNombre ahora esta: ${nuevoEstado.label}.",
+        )
+    }
+
     override fun observeAssignedTickets(uid: String): Flow<List<Ticket>> = callbackFlow {
         val scope = this
         val listener = firestore.collection(Constants.COL_TICKETS)
@@ -214,6 +232,29 @@ class TicketRepositoryImpl @Inject constructor(
                 }
             }
         awaitClose { listener.remove() }
+    }
+
+    /** HU07 - El tecnico avanza el estado del ticket; notifica al reportante por FCM. */
+    override suspend fun updateTicketStatus(ticketId: String, nuevoEstado: TicketStatus): Result<Unit> = runCatching {
+        val update = mapOf(
+            "estado" to nuevoEstado.name,
+            "actualizadoEn" to System.currentTimeMillis(),
+        )
+        firestore.collection(Constants.COL_TICKETS).document(ticketId)
+            .update(update)
+            .await()
+
+        // Tambien actualizamos Room si el ticket existe localmente
+        ticketDao.findById(ticketId)?.let { entity ->
+            ticketDao.update(entity.copy(
+                estado = nuevoEstado,
+                actualizadoEn = System.currentTimeMillis(),
+                sincronizado = true,
+            ))
+        }
+
+        // --- HU07: Notificación Push al reportante por el cambio de estado ---
+        notificarReportante(ticketId, nuevoEstado)
     }
 
     override fun observeTicketRealtime(ticketId: String): Flow<Ticket?> = callbackFlow {

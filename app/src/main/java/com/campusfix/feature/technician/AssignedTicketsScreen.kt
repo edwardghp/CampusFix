@@ -9,15 +9,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -28,7 +25,6 @@ import com.campusfix.domain.model.TicketStatus
 import com.campusfix.domain.model.Urgency
 import java.text.SimpleDateFormat
 import java.util.*
-import com.campusfix.domain.model.TicketStatus
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssignedTicketsScreen(
@@ -75,32 +71,18 @@ fun AssignedTicketsScreen(
                     onCategoriaSelected = viewModel::setCategoriaFilter,
                 )
             }
-        } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(inner)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(assignedTickets.sortedByDescending { it.urgencia == Urgency.ALTA }) { ticket ->
-                    AssignedTicketItem(ticket = ticket,
+                items(assignedTickets.sortedByDescending { it.urgencia == Urgency.ALTA }, key = { it.id }) { ticket ->
+                    AssignedTicketItem(
+                        ticket = ticket,
                         // HU08 - un ticket ya CERRADO no se puede volver a abrir para cierre
-                        onClick = { if (ticket.estado != TicketStatus.CERRADO) onTicketClick(ticket.id) },)
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(assignedTickets, key = { it.id }) { ticket ->
-                        AssignedTicketItem(
-                            ticket = ticket,
-                            onAvanzarEstado = { viewModel.avanzarEstado(ticket) },
-                        )
-                    }
+                        onClick = { if (ticket.estado != TicketStatus.CERRADO) onTicketClick(ticket.id) },
+                    )
                 }
             }
         }
