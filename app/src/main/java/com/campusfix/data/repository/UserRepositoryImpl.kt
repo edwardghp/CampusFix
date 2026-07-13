@@ -63,4 +63,23 @@ class UserRepositoryImpl @Inject constructor(
             .set(mapOf("activo" to active), SetOptions.merge())
             .await()
     }
+
+    override suspend fun getUserById(uid: String): User? = runCatching {
+        val doc = firestore.collection(Constants.COL_USERS).document(uid).get().await()
+        if (!doc.exists()) return null
+        User(
+            uid = doc.id,
+            email = doc.getString("email") ?: "",
+            nombre = doc.getString("nombre") ?: "",
+            rol = UserRole.fromName(doc.getString("rol")),
+            facultad = doc.getString("facultad") ?: "",
+            cargo = doc.getString("cargo") ?: "",
+            fotoUrl = doc.getString("fotoUrl") ?: "",
+            activo = doc.getBoolean("activo") ?: false,
+            especialidad = doc.getString("especialidad")?.let {
+                try { FaultCategory.valueOf(it) } catch (e: Exception) { null }
+            },
+            fcmToken = doc.getString("fcmToken") ?: ""
+        )
+    }.getOrNull()
 }

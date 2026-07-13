@@ -58,6 +58,8 @@ class TicketSyncWorker @AssistedInject constructor(
                 "id" to ticket.id,
                 "aulaId" to ticket.aulaId,
                 "aulaNombre" to ticket.aulaNombre,
+                "aulaLat" to ticket.aulaLat,
+                "aulaLng" to ticket.aulaLng,
                 "categoria" to ticket.categoria.name,
                 "urgencia" to ticket.urgencia.name,
                 "descripcion" to ticket.descripcion,
@@ -69,11 +71,18 @@ class TicketSyncWorker @AssistedInject constructor(
                 "fechaAsignacion" to ticket.fechaAsignacion,
                 "estado" to ticket.estado.name,
                 "creadoEn" to ticket.creadoEn,
+                "actualizadoEn" to ticket.creadoEn,
             )
             firestore.collection(Constants.COL_TICKETS).document(ticketId).set(data).await()
 
-            // 4) Marcar como sincronizado en Room
-            ticketDao.update(ticket.copy(sincronizado = true))
+            // 4) Marcar como sincronizado en Room (con las URLs remotas ya subidas)
+            ticketDao.update(
+                ticket.copy(
+                    sincronizado = true,
+                    fotoUrlsRemotas = fotoUrls.joinToString("|"),
+                    audioUrlRemoto = audioUrl,
+                )
+            )
 
             // 5) Notificacion local de confirmacion (HU04)
             NotificationHelper.show(

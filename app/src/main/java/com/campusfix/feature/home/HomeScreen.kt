@@ -1,8 +1,10 @@
 package com.campusfix.feature.home
 
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +19,8 @@ import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,11 +34,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.campusfix.domain.model.Ticket
+import com.campusfix.domain.model.TicketStatus
 import com.campusfix.domain.model.UserRole
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -137,7 +143,10 @@ private fun TicketCard(ticket: Ticket, onRate: (Int) -> Unit) {
     val fmt = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
-            Text(ticket.categoria.label, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(ticket.categoria.label, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                EstadoBadge(estado = ticket.estado)
+            }
             Text(ticket.aulaNombre, style = MaterialTheme.typography.bodyMedium)
             Text(
                 ticket.descripcion,
@@ -145,11 +154,11 @@ private fun TicketCard(ticket: Ticket, onRate: (Int) -> Unit) {
                 color = MaterialTheme.colorScheme.outline,
             )
             Spacer(Modifier.height(4.dp))
-            val sync = if (ticket.sincronizado) "Enviado" else "Pendiente de envio"
+            val sync = if (ticket.sincronizado) "Sincronizado" else "Pendiente de envio"
             Text(
-                "Estado: ${ticket.estado.label}  -  $sync  -  ${fmt.format(Date(ticket.creadoEn))}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
+                "$sync  -  Actualizado: ${fmt.format(Date(ticket.actualizadoEn))}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline,
             )
             // HU08 - Si el tecnico ya resolvio la falla, mostrar su solucion
             if (ticket.solucionDescripcion.isNotBlank()) {
@@ -194,4 +203,25 @@ private fun StarRating(onRate: (Int) -> Unit) {
             )
         }
     }
+}
+
+/** HU07 - Indicador visual del estado del ticket para el reportante. */
+@Composable
+private fun EstadoBadge(estado: TicketStatus) {
+    val color = when (estado) {
+        TicketStatus.ABIERTO -> MaterialTheme.colorScheme.outline
+        TicketStatus.ASIGNADO -> MaterialTheme.colorScheme.tertiary
+        TicketStatus.EN_ATENCION -> MaterialTheme.colorScheme.primary
+        TicketStatus.RESUELTO -> Color(0xFF2E7D32)
+        TicketStatus.CERRADO -> MaterialTheme.colorScheme.outline
+    }
+    AssistChip(
+        onClick = {},
+        enabled = false,
+        label = { Text(estado.label, style = MaterialTheme.typography.labelSmall) },
+        colors = AssistChipDefaults.assistChipColors(
+            disabledContainerColor = color.copy(alpha = 0.15f),
+            disabledLabelColor = color,
+        ),
+    )
 }

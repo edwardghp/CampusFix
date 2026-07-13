@@ -32,11 +32,17 @@ interface TicketDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(ticket: TicketEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(tickets: List<TicketEntity>)
+
     @Update
     suspend fun update(ticket: TicketEntity)
 
     @Query("SELECT * FROM tickets WHERE id = :id LIMIT 1")
     suspend fun findById(id: String): TicketEntity?
+
+    @Query("SELECT * FROM tickets WHERE id = :id LIMIT 1")
+    fun observeById(id: String): Flow<TicketEntity?>
 
     @Query("SELECT * FROM tickets WHERE reportanteUid = :uid ORDER BY creadoEn DESC")
     fun observeByUser(uid: String): Flow<List<TicketEntity>>

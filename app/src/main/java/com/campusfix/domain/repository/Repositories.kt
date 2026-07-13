@@ -6,6 +6,8 @@ import com.campusfix.domain.model.User
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
 import com.campusfix.domain.model.Ticket
+import com.campusfix.domain.model.TicketStatus
+
 /* Interfaces de repositorio (capa domain). La capa data las implementa. */
 
 /** HU01 - Autenticacion con Firebase Auth. */
@@ -34,6 +36,8 @@ interface UserRepository {
     suspend fun updateTechnicianStatus(uid: String, active: Boolean): Result<Unit>
     /** Actualiza el token FCM del usuario actual. */
     suspend fun updateFcmToken(uid: String, token: String): Result<Unit>
+    /** HU07 - Obtiene un usuario puntual por uid (para leer su fcmToken al notificar). */
+    suspend fun getUserById(uid: String): User?
 }
 
 /** HU03 - Catalogo de aulas (offline-first con Room). */
@@ -50,11 +54,13 @@ interface TicketRepository {
     /** Guarda el ticket localmente (Room) y encola su envio con WorkManager. */
     suspend fun createTicket(ticket: Ticket, photos: List<Uri>, audio: Uri?): Result<String>
     fun observeMyTickets(uid: String): Flow<List<Ticket>>
+    /** HU07 - Version en tiempo real de "mis tickets" (listener de Firestore + cache en Room). */
+    fun observeMyTicketsRealtime(uid: String): Flow<List<Ticket>>
     /** HU06 - Observa todos los tickets abiertos para el coordinador. */
     fun observeOpenTickets(): Flow<List<Ticket>>
     /** HU06 - Asigna un ticket a un tecnico. */
     suspend fun assignTicket(ticketId: String, technician: User): Result<Unit>
-    /** HU06 - Observa los tickets asignados a un tecnico. */
+    /** HU07 - Observa los tickets asignados a un tecnico (cola del tecnico), con cache en Room. */
     fun observeAssignedTickets(uid: String): Flow<List<Ticket>>
     /** HU08 - Obtiene un ticket puntual (para la pantalla de cierre del tecnico). */
     suspend fun getTicketById(ticketId: String): Ticket?
