@@ -20,6 +20,7 @@ data class HomeUiState(
     val user: User = User(),
     val tickets: List<Ticket> = emptyList(),
     val loading: Boolean = true,
+    val error: String? = null,
 )
 
 /** Pantalla principal: muestra el saludo por rol y los tickets propios del usuario. */
@@ -62,4 +63,19 @@ class HomeViewModel @Inject constructor(
     }
 
     fun logout() = authRepository.logout()
+
+    fun consumeError() = _state.update { it.copy(error = null) }
+
+    /**
+     * HU08 - El reportante califica la atencion recibida (1 a 5 estrellas).
+     * El ticket pasa de RESUELTO a CERRADO.
+     */
+    fun calificarTicket(ticketId: String, estrellas: Int) {
+        viewModelScope.launch {
+            ticketRepository.calificarYCerrarTicket(ticketId, estrellas)
+                .onFailure { e ->
+                    _state.update { it.copy(error = e.message ?: "No se pudo registrar la calificacion") }
+                }
+        }
+    }
 }

@@ -86,4 +86,16 @@ data class Ticket(
     val creadoEn: Long = System.currentTimeMillis(),
     val actualizadoEn: Long = System.currentTimeMillis(),
     val sincronizado: Boolean = false,
+
+    // ---- HU08: cierre del ticket con evidencia de solucion ----
+    /** Descripcion de la solucion aplicada, escrita por el tecnico. */
+    val solucionDescripcion: String = "",
+    /** URL en Firebase Storage de la foto del equipo reparado. */
+    val solucionFotoUrl: String = "",
+    /** Tiempo que le tomo al tecnico resolver la falla, en minutos. */
+    val tiempoEmpleadoMinutos: Int? = null,
+    /** Momento en que el tecnico marco el ticket como resuelto. */
+    val resueltoEn: Long? = null,
+    /** Calificacion de 1 a 5 estrellas que da el reportante al cerrar el ticket. */
+    val calificacion: Int? = null,
 )

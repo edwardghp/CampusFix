@@ -53,6 +53,12 @@ data class TicketEntity(
     val creadoEn: Long,
     val actualizadoEn: Long = creadoEn,
     val sincronizado: Boolean,
+    // ---- HU08: base de conocimiento local de soluciones ----
+    val solucionDescripcion: String = "",
+    val solucionFotoUrl: String = "",
+    val tiempoEmpleadoMinutos: Int? = null,
+    val resueltoEn: Long? = null,
+    val calificacion: Int? = null,
 ) {
     fun toDomain() = Ticket(
         id = id, aulaId = aulaId, aulaNombre = aulaNombre, aulaLat = aulaLat, aulaLng = aulaLng,
@@ -61,7 +67,10 @@ data class TicketEntity(
         audioUrl = audioUrlRemoto,
         reportanteUid = reportanteUid,
         tecnicoId = tecnicoId, tecnicoNombre = tecnicoNombre, fechaAsignacion = fechaAsignacion,
-        estado = estado, creadoEn = creadoEn, actualizadoEn = actualizadoEn, sincronizado = sincronizado,
+        estado = estado, creadoEn = creadoEn, sincronizado = sincronizado,
+        solucionDescripcion = solucionDescripcion, solucionFotoUrl = solucionFotoUrl,
+        tiempoEmpleadoMinutos = tiempoEmpleadoMinutos, resueltoEn = resueltoEn,
+        calificacion = calificacion,
     )
 
     companion object {

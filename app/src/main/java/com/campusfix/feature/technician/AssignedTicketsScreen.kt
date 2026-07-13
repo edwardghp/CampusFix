@@ -28,18 +28,13 @@ import com.campusfix.domain.model.TicketStatus
 import com.campusfix.domain.model.Urgency
 import java.text.SimpleDateFormat
 import java.util.*
-
-/**
- * HU07 - Cola de trabajo del tecnico con seguimiento en tiempo real.
- * - Listener de Firestore (vivo) con cache offline en Room.
- * - Filtros por estado y categoria.
- * - Ordenada por prioridad (urgencia).
- * - Permite avanzar el estado del ticket y navegar al aula con Google Maps.
- */
+import com.campusfix.domain.model.TicketStatus
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssignedTicketsScreen(
     onBack: () -> Unit,
+    // HU08 - al tocar un ticket, se navega a la pantalla de cierre/detalle
+    onTicketClick: (String) -> Unit,
     viewModel: AssignedTicketsViewModel = hiltViewModel()
 ) {
     val assignedTickets by viewModel.assignedTickets.collectAsStateWithLifecycle()
@@ -80,16 +75,18 @@ fun AssignedTicketsScreen(
                     onCategoriaSelected = viewModel::setCategoriaFilter,
                 )
             }
-
-            if (assignedTickets.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        if (state.filters.estado != null || state.filters.categoria != null)
-                            "No hay tickets que coincidan con el filtro."
-                        else
-                            "No tienes tareas asignadas en este momento.",
-                        color = MaterialTheme.colorScheme.outline,
-                    )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(inner)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(assignedTickets.sortedByDescending { it.urgencia == Urgency.ALTA }) { ticket ->
+                    AssignedTicketItem(ticket = ticket,
+                        // HU08 - un ticket ya CERRADO no se puede volver a abrir para cierre
+                        onClick = { if (ticket.estado != TicketStatus.CERRADO) onTicketClick(ticket.id) },)
                 }
             } else {
                 LazyColumn(
@@ -161,11 +158,12 @@ private fun FiltersBar(
 }
 
 @Composable
-fun AssignedTicketItem(ticket: Ticket, onAvanzarEstado: () -> Unit) {
-    val context = LocalContext.current
+fun AssignedTicketItem(ticket: Ticket,onClick: () -> Unit) {
     val fmt = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
-
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+    ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -199,34 +197,15 @@ fun AssignedTicketItem(ticket: Ticket, onAvanzarEstado: () -> Unit) {
                     color = MaterialTheme.colorScheme.outline,
                 )
             }
-            Spacer(Modifier.height(12.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                // HU07 - Navegacion al aula con intent de Google Maps
-                OutlinedButton(
-                    onClick = { abrirEnGoogleMaps(context, ticket) },
-                    enabled = ticket.aulaLat != null && ticket.aulaLng != null,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.DirectionsWalk, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Como llegar")
-                }
-                // HU07 - Avanzar el estado del ticket (Asignado -> En atencion -> Resuelto)
-                val siguiente = when (ticket.estado) {
-                    TicketStatus.ASIGNADO -> "Iniciar atencion"
-                    TicketStatus.EN_ATENCION -> "Marcar resuelto"
-                    else -> null
-                }
-                if (siguiente != null) {
-                    Button(onClick = onAvanzarEstado, modifier = Modifier.weight(1f)) {
-                        Text(siguiente)
-                        Spacer(Modifier.width(6.dp))
-                        Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
-                    }
-                }
+            // HU08 - pista visual de que el ticket ya tiene solucion registrada
+            if (ticket.estado == TicketStatus.RESUELTO || ticket.estado == TicketStatus.CERRADO) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Solucion registrada" + if (ticket.tiempoEmpleadoMinutos != null)
+                        " (${ticket.tiempoEmpleadoMinutos} min)" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
             }
         }
     }
