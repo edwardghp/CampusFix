@@ -37,6 +37,9 @@ data class Aula(
     val facultad: String = "",
     val edificio: String = "",
     val qrCode: String = "",
+    // HU07 - Coordenadas para navegacion con Google Maps Intent
+    val latitud: Double? = null,
+    val longitud: Double? = null,
 )
 
 /** Categoria de la falla reportada (HU03). */
@@ -67,6 +70,9 @@ data class Ticket(
     val id: String = "",
     val aulaId: String = "",
     val aulaNombre: String = "",
+    // HU07 - Coordenadas del aula copiadas al crear el ticket (navegacion con Maps)
+    val aulaLat: Double? = null,
+    val aulaLng: Double? = null,
     val categoria: FaultCategory = FaultCategory.OTRO,
     val urgencia: Urgency = Urgency.MEDIA,
     val descripcion: String = "",
@@ -78,5 +84,6 @@ data class Ticket(
     val fechaAsignacion: Long? = null,
     val estado: TicketStatus = TicketStatus.ABIERTO,
     val creadoEn: Long = System.currentTimeMillis(),
+    val actualizadoEn: Long = System.currentTimeMillis(),
     val sincronizado: Boolean = false,
 )

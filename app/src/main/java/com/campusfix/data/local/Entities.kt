@@ -1,5 +1,6 @@
 package com.campusfix.data.local
 
+
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.campusfix.domain.model.Aula
@@ -18,10 +19,12 @@ data class AulaEntity(
     val facultad: String,
     val edificio: String,
     val qrCode: String,
+    val latitud: Double? = null,
+    val longitud: Double? = null,
 ) {
-    fun toDomain() = Aula(id, codigo, nombre, facultad, edificio, qrCode)
+    fun toDomain() = Aula(id, codigo, nombre, facultad, edificio, qrCode, latitud, longitud)
     companion object {
-        fun from(a: Aula) = AulaEntity(a.id, a.codigo, a.nombre, a.facultad, a.edificio, a.qrCode)
+        fun from(a: Aula) = AulaEntity(a.id, a.codigo, a.nombre, a.facultad, a.edificio, a.qrCode, a.latitud, a.longitud)
     }
 }
 
@@ -30,6 +33,8 @@ data class TicketEntity(
     @PrimaryKey val id: String,
     val aulaId: String,
     val aulaNombre: String,
+    val aulaLat: Double? = null,
+    val aulaLng: Double? = null,
     val categoria: FaultCategory,
     val urgencia: Urgency,
     val descripcion: String,
@@ -37,20 +42,40 @@ data class TicketEntity(
     val fotosLocales: String,
     /** Ruta local del audio pendiente de subir */
     val audioLocal: String,
+    /** URLs remotas (Storage) una vez sincronizado, separadas por '|' */
+    val fotoUrlsRemotas: String = "",
+    val audioUrlRemoto: String = "",
     val reportanteUid: String,
     val tecnicoId: String? = null,
     val tecnicoNombre: String? = null,
     val fechaAsignacion: Long? = null,
     val estado: TicketStatus,
     val creadoEn: Long,
+    val actualizadoEn: Long = creadoEn,
     val sincronizado: Boolean,
 ) {
     fun toDomain() = Ticket(
-        id = id, aulaId = aulaId, aulaNombre = aulaNombre, categoria = categoria,
-        urgencia = urgencia, descripcion = descripcion, reportanteUid = reportanteUid,
+        id = id, aulaId = aulaId, aulaNombre = aulaNombre, aulaLat = aulaLat, aulaLng = aulaLng,
+        categoria = categoria, urgencia = urgencia, descripcion = descripcion,
+        fotoUrls = if (fotoUrlsRemotas.isBlank()) emptyList() else fotoUrlsRemotas.split("|"),
+        audioUrl = audioUrlRemoto,
+        reportanteUid = reportanteUid,
         tecnicoId = tecnicoId, tecnicoNombre = tecnicoNombre, fechaAsignacion = fechaAsignacion,
-        estado = estado, creadoEn = creadoEn, sincronizado = sincronizado,
+        estado = estado, creadoEn = creadoEn, actualizadoEn = actualizadoEn, sincronizado = sincronizado,
     )
+
+    companion object {
+        /** HU07 - Mapea un Ticket de dominio (p.ej. recibido por listener de Firestore) a su entidad local. */
+        fun from(t: Ticket) = TicketEntity(
+            id = t.id, aulaId = t.aulaId, aulaNombre = t.aulaNombre, aulaLat = t.aulaLat, aulaLng = t.aulaLng,
+            categoria = t.categoria, urgencia = t.urgencia, descripcion = t.descripcion,
+            fotosLocales = "", audioLocal = "",
+            fotoUrlsRemotas = t.fotoUrls.joinToString("|"), audioUrlRemoto = t.audioUrl,
+            reportanteUid = t.reportanteUid, tecnicoId = t.tecnicoId, tecnicoNombre = t.tecnicoNombre,
+            fechaAsignacion = t.fechaAsignacion, estado = t.estado, creadoEn = t.creadoEn,
+            actualizadoEn = t.actualizadoEn, sincronizado = t.sincronizado,
+        )
+    }
 }
 
 /** Convertidores para que Room pueda guardar los enums. */

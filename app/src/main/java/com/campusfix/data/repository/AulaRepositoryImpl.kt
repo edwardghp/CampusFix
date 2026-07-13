@@ -41,6 +41,8 @@ class AulaRepositoryImpl @Inject constructor(
                 facultad = doc.getString("facultad") ?: "",
                 edificio = doc.getString("edificio") ?: "",
                 qrCode = doc.getString("qrCode") ?: doc.id,
+                latitud = doc.getDouble("latitud"),
+                longitud = doc.getDouble("longitud"),
             )
         }
         if (aulas.isNotEmpty()) aulaDao.upsertAll(aulas)
