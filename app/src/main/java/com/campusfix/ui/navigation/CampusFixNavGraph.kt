@@ -17,7 +17,7 @@ import com.campusfix.feature.report.ReportScreen
 import com.campusfix.feature.admin.AssignmentScreen
 import com.campusfix.feature.admin.TechManagementScreen
 import com.campusfix.feature.technician.AssignedTicketsScreen
-
+import com.campusfix.feature.technician.TicketDetailScreen
 /** Grafo de navegacion de CampusFix. Define el flujo entre pantallas del Sprint 1. */
 @Composable
 fun CampusFixNavGraph() {
@@ -92,7 +92,22 @@ fun CampusFixNavGraph() {
         // HU06 - Tickets asignados al tecnico
         composable(Routes.ASSIGNED_TICKETS) {
             AssignedTicketsScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                        // HU08 - al tocar un ticket asignado, se abre la pantalla de cierre
+                        onTicketClick = { ticketId ->
+                    navController.navigate(Routes.ticketDetail(ticketId))
+                },
+            )
+        }
+
+        // HU08 - Cierre del ticket con evidencia de solucion
+        composable(
+            route = Routes.TICKET_DETAIL,
+            arguments = listOf(navArgument("ticketId") { type = NavType.StringType }),
+        ) {
+            TicketDetailScreen(
+                onCerrado = { navController.popBackStack() },
+                onBack = { navController.popBackStack() },
             )
         }
 

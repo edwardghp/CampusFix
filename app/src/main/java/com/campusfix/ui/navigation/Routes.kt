@@ -19,4 +19,7 @@ object Routes {
     
     // HU06 - Tickets asignados (solo Tecnico)
     const val ASSIGNED_TICKETS = "assigned_tickets"
+    // HU08 - Cierre del ticket con evidencia de solucion (solo Tecnico)
+    const val TICKET_DETAIL = "ticket_detail/{ticketId}"
+    fun ticketDetail(ticketId: String) = "ticket_detail/$ticketId"
 }

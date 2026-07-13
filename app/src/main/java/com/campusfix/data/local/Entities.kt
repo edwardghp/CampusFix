@@ -44,12 +44,21 @@ data class TicketEntity(
     val estado: TicketStatus,
     val creadoEn: Long,
     val sincronizado: Boolean,
+    // ---- HU08: base de conocimiento local de soluciones ----
+    val solucionDescripcion: String = "",
+    val solucionFotoUrl: String = "",
+    val tiempoEmpleadoMinutos: Int? = null,
+    val resueltoEn: Long? = null,
+    val calificacion: Int? = null,
 ) {
     fun toDomain() = Ticket(
         id = id, aulaId = aulaId, aulaNombre = aulaNombre, categoria = categoria,
         urgencia = urgencia, descripcion = descripcion, reportanteUid = reportanteUid,
         tecnicoId = tecnicoId, tecnicoNombre = tecnicoNombre, fechaAsignacion = fechaAsignacion,
         estado = estado, creadoEn = creadoEn, sincronizado = sincronizado,
+        solucionDescripcion = solucionDescripcion, solucionFotoUrl = solucionFotoUrl,
+        tiempoEmpleadoMinutos = tiempoEmpleadoMinutos, resueltoEn = resueltoEn,
+        calificacion = calificacion,
     )
 }
 

@@ -18,11 +18,13 @@ import com.campusfix.domain.model.Ticket
 import com.campusfix.domain.model.Urgency
 import java.text.SimpleDateFormat
 import java.util.*
-
+import com.campusfix.domain.model.TicketStatus
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssignedTicketsScreen(
     onBack: () -> Unit,
+    // HU08 - al tocar un ticket, se navega a la pantalla de cierre/detalle
+    onTicketClick: (String) -> Unit,
     viewModel: AssignedTicketsViewModel = hiltViewModel()
 ) {
     val assignedTickets by viewModel.assignedTickets.collectAsStateWithLifecycle()
@@ -62,7 +64,9 @@ fun AssignedTicketsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(assignedTickets.sortedByDescending { it.urgencia == Urgency.ALTA }) { ticket ->
-                    AssignedTicketItem(ticket = ticket)
+                    AssignedTicketItem(ticket = ticket,
+                        // HU08 - un ticket ya CERRADO no se puede volver a abrir para cierre
+                        onClick = { if (ticket.estado != TicketStatus.CERRADO) onTicketClick(ticket.id) },)
                 }
             }
         }
@@ -70,10 +74,11 @@ fun AssignedTicketsScreen(
 }
 
 @Composable
-fun AssignedTicketItem(ticket: Ticket) {
+fun AssignedTicketItem(ticket: Ticket,onClick: () -> Unit) {
     val fmt = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     Card(
         modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -106,6 +111,16 @@ fun AssignedTicketItem(ticket: Ticket) {
                     fmt.format(Date(ticket.creadoEn)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
+                )
+            }
+            // HU08 - pista visual de que el ticket ya tiene solucion registrada
+            if (ticket.estado == TicketStatus.RESUELTO || ticket.estado == TicketStatus.CERRADO) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Solucion registrada" + if (ticket.tiempoEmpleadoMinutos != null)
+                        " (${ticket.tiempoEmpleadoMinutos} min)" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
                 )
             }
         }

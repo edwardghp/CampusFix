@@ -39,6 +39,10 @@ import com.campusfix.domain.model.UserRole
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.campusfix.domain.model.TicketStatus
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.foundation.clickable
 
 /** Pantalla principal (Sprint 1). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,7 +123,8 @@ fun HomeScreen(
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(state.tickets) { ticket -> TicketCard(ticket) }
+                    items(state.tickets) { ticket -> TicketCard(ticket = ticket,
+                        onRate = { estrellas -> viewModel.calificarTicket(ticket.id, estrellas) },) }
                 }
             }
         }
@@ -128,7 +133,7 @@ fun HomeScreen(
 
 
 @Composable
-private fun TicketCard(ticket: Ticket) {
+private fun TicketCard(ticket: Ticket, onRate: (Int) -> Unit) {
     val fmt = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
@@ -145,6 +150,47 @@ private fun TicketCard(ticket: Ticket) {
                 "Estado: ${ticket.estado.label}  -  $sync  -  ${fmt.format(Date(ticket.creadoEn))}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
+            )
+            // HU08 - Si el tecnico ya resolvio la falla, mostrar su solucion
+            if (ticket.solucionDescripcion.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Solucion: ${ticket.solucionDescripcion}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+
+            // HU08 - El reportante califica la atencion solo cuando el ticket esta RESUELTO
+            // (aun no calificado). Una vez calificado, el ticket pasa a CERRADO.
+            if (ticket.estado == TicketStatus.RESUELTO) {
+                Spacer(Modifier.height(8.dp))
+                Text("Califica la atencion recibida:", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(4.dp))
+                StarRating(onRate = onRate)
+            } else if (ticket.estado == TicketStatus.CERRADO && ticket.calificacion != null) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Tu calificacion: ${ticket.calificacion} / 5",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
+        }
+    }
+}
+
+/** HU08 - Selector de calificacion de 1 a 5 estrellas. */
+@Composable
+private fun StarRating(onRate: (Int) -> Unit) {
+    Row {
+        for (i in 1..5) {
+            Icon(
+                imageVector = Icons.Default.StarBorder,
+                contentDescription = "Calificar con $i estrellas",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .padding(end = 4.dp)
+                    .clickable { onRate(i) },
             )
         }
     }
