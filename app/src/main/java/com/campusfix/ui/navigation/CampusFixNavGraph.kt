@@ -15,6 +15,7 @@ import com.campusfix.feature.report.QrScanScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.campusfix.feature.report.ReportScreen
 import com.campusfix.feature.admin.AssignmentScreen
+import com.campusfix.feature.admin.DashboardScreen
 import com.campusfix.feature.admin.TechManagementScreen
 import com.campusfix.feature.technician.AssignedTicketsScreen
 import com.campusfix.feature.technician.TicketDetailScreen
@@ -71,6 +72,7 @@ fun CampusFixNavGraph() {
                 },
                 onGoToAssignment = { navController.navigate(Routes.ASSIGNMENT) },
                 onGoToTechManagement = { navController.navigate(Routes.TECH_MANAGEMENT) },
+                onGoToDashboard = { navController.navigate(Routes.DASHBOARD) },
                 onGoToAssignedTickets = { navController.navigate(Routes.ASSIGNED_TICKETS) },
             )
         }
@@ -85,6 +87,13 @@ fun CampusFixNavGraph() {
         // HU06 - Gestion de tecnicos
         composable(Routes.TECH_MANAGEMENT) {
             TechManagementScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // HU10 - Dashboard de metricas y SLA (solo Coordinador)
+        composable(Routes.DASHBOARD) {
+            DashboardScreen(
                 onBack = { navController.popBackStack() }
             )
         }

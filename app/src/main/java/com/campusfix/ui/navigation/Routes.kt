@@ -16,6 +16,8 @@ object Routes {
     // HU06 - Asignacion de tickets (solo Coordinador)
     const val ASSIGNMENT = "assignment"
     const val TECH_MANAGEMENT = "tech_management"
+    // HU10 - Dashboard de metricas y SLA (solo Coordinador)
+    const val DASHBOARD = "dashboard"
     
     // HU06 - Tickets asignados (solo Tecnico)
     const val ASSIGNED_TICKETS = "assigned_tickets"

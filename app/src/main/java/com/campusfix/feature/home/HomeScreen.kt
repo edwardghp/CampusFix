@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
@@ -57,6 +58,7 @@ fun HomeScreen(
     onLoggedOut: () -> Unit,
     onGoToAssignment: () -> Unit,
     onGoToTechManagement: () -> Unit,
+    onGoToDashboard: () -> Unit,
     onGoToAssignedTickets: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -68,6 +70,9 @@ fun HomeScreen(
                 title = { Text("CampusFix") },
                 actions = {
                     if (state.user.rol == UserRole.COORDINADOR) {
+                        IconButton(onClick = onGoToDashboard) {
+                            Icon(Icons.Default.BarChart, contentDescription = "Dashboard de metricas")
+                        }
                         IconButton(onClick = onGoToTechManagement) {
                             Icon(Icons.Default.People, contentDescription = "Gestionar técnicos")
                         }
