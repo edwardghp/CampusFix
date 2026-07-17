@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -58,11 +59,14 @@ import java.io.File
  * solucion aplicada: descripcion, tiempo empleado y foto del equipo reparado.
  * Al enviar, el ticket pasa a estado "Resuelto".
  */
+
+/** HU09 - Se añadio ongotochat y el boton para el asistente de IA. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TicketDetailScreen(
     onCerrado: () -> Unit,
     onBack: () -> Unit,
+    onGoToChat: (String) -> Unit,
     viewModel: TicketDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -101,6 +105,11 @@ fun TicketDetailScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atras")
                     }
                 },
+                actions = {
+                    IconButton(onClick = { state.ticket?.id?.let { onGoToChat(it) } }) {
+                        Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "Asistente IA")
+                    }
+                }
             )
         },
     ) { inner ->

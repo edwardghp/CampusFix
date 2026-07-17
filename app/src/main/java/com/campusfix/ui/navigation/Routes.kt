@@ -24,4 +24,8 @@ object Routes {
     // HU08 - Cierre del ticket con evidencia de solucion (solo Tecnico)
     const val TICKET_DETAIL = "ticket_detail/{ticketId}"
     fun ticketDetail(ticketId: String) = "ticket_detail/$ticketId"
+
+    // HU09 - Asistente IA de soporte (chatbot)
+    const val CHAT = "chat/{ticketId}"
+    fun chat(ticketId: String) = "chat/$ticketId"
 }

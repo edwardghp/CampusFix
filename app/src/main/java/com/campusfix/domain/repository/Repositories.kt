@@ -86,3 +86,9 @@ interface TicketRepository {
     /** HU08 - El reportante califica la atencion (1 a 5 estrellas) y el ticket pasa a CERRADO. */
     suspend fun calificarYCerrarTicket(ticketId: String, calificacion: Int): Result<Unit>
 }
+
+/** HU09 - Historial de chat con la IA sobre un ticket. */
+interface ChatRepository {
+    fun observeChatHistory(ticketId: String): kotlinx.coroutines.flow.Flow<List<com.campusfix.domain.model.ChatMessage>>
+    suspend fun sendMessage(ticketId: String, content: String): Result<com.campusfix.domain.model.ChatMessage>
+}

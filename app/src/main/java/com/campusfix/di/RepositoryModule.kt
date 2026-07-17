@@ -17,6 +17,8 @@ import com.campusfix.data.repository.TicketRepositoryImpl
 import com.campusfix.domain.repository.TicketRepository
 import com.campusfix.data.repository.DiagnosticoRepositoryImpl
 import com.campusfix.domain.repository.DiagnosticoRepository
+import com.campusfix.data.repository.ChatRepositoryImpl
+import com.campusfix.domain.repository.ChatRepository
 
 /** Modulo Hilt: enlaza cada interfaz de repositorio con su implementacion. */
 @Module
@@ -39,4 +41,6 @@ abstract class RepositoryModule {
     @Binds @Singleton
     abstract fun bindDiagnosticoRepository(impl: DiagnosticoRepositoryImpl): DiagnosticoRepository
 
+    @Binds @Singleton
+    abstract fun bindChatRepository(impl: ChatRepositoryImpl): ChatRepository
 }

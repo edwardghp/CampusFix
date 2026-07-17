@@ -1,11 +1,16 @@
-package com.campusfix.data.remote.gemini
+package com.campusfix.data.remote
 
 import com.google.gson.annotations.SerializedName
 
 
 data class GeminiRequest(
     val contents: List<Content>,
+    @SerializedName("system_instruction") val systemInstruction: SystemInstruction? = null,
     @SerializedName("generationConfig") val generationConfig: GenerationConfig? = null,
+)
+
+data class SystemInstruction(
+    val parts: List<Part>
 )
 
 data class Content(

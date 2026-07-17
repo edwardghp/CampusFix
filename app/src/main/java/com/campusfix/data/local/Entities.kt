@@ -9,6 +9,7 @@ import com.campusfix.domain.model.Urgency
 import com.campusfix.domain.model.TicketStatus
 import androidx.room.TypeConverter
 import com.campusfix.domain.model.Ticket
+import com.campusfix.domain.model.ChatMessage
 /* ============ ENTIDADES ROOM (SQLite local - HU03) ============ */
 
 @Entity(tableName = "aulas")
@@ -73,8 +74,8 @@ data class TicketEntity(
         calificacion = calificacion,
     )
 
+    /** HU07 - Mapea un Ticket de dominio (p.ej. recibido por listener de Firestore) a su entidad local. */
     companion object {
-        /** HU07 - Mapea un Ticket de dominio (p.ej. recibido por listener de Firestore) a su entidad local. */
         fun from(t: Ticket) = TicketEntity(
             id = t.id, aulaId = t.aulaId, aulaNombre = t.aulaNombre, aulaLat = t.aulaLat, aulaLng = t.aulaLng,
             categoria = t.categoria, urgencia = t.urgencia, descripcion = t.descripcion,
@@ -83,6 +84,35 @@ data class TicketEntity(
             reportanteUid = t.reportanteUid, tecnicoId = t.tecnicoId, tecnicoNombre = t.tecnicoNombre,
             fechaAsignacion = t.fechaAsignacion, estado = t.estado, creadoEn = t.creadoEn,
             actualizadoEn = t.actualizadoEn, sincronizado = t.sincronizado,
+        )
+    }
+}
+
+@Entity(
+    tableName = "chat_messages",
+    indices = [androidx.room.Index(value = ["ticketId"])]
+)
+data class ChatMessageEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val ticketId: String,
+    val role: String,
+    val content: String,
+    val timestamp: Long,
+) {
+    fun toDomain() = ChatMessage(
+        id = id.toString(),
+        ticketId = ticketId,
+        role = role,
+        content = content,
+        timestamp = timestamp
+    )
+
+    companion object {
+        fun from(m: ChatMessage) = ChatMessageEntity(
+            ticketId = m.ticketId,
+            role = m.role,
+            content = m.content,
+            timestamp = m.timestamp
         )
     }
 }
