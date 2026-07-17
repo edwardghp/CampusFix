@@ -19,6 +19,7 @@ import com.campusfix.feature.admin.DashboardScreen
 import com.campusfix.feature.admin.TechManagementScreen
 import com.campusfix.feature.technician.AssignedTicketsScreen
 import com.campusfix.feature.technician.TicketDetailScreen
+import com.campusfix.feature.chat.ChatScreen
 /** Grafo de navegacion de CampusFix. Define el flujo entre pantallas del Sprint 1. */
 @Composable
 fun CampusFixNavGraph() {
@@ -117,6 +118,17 @@ fun CampusFixNavGraph() {
             TicketDetailScreen(
                 onCerrado = { navController.popBackStack() },
                 onBack = { navController.popBackStack() },
+                onGoToChat = { ticketId -> navController.navigate(Routes.chat(ticketId)) }
+            )
+        }
+
+        // HU09 - Asistente IA de soporte (chatbot)
+        composable(
+            route = Routes.CHAT,
+            arguments = listOf(navArgument("ticketId") { type = NavType.StringType }),
+        ) {
+            ChatScreen(
+                onBack = { navController.popBackStack() }
             )
         }
 

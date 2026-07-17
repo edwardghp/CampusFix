@@ -19,6 +19,7 @@ val geminiApiKey: String =
         ?.firstOrNull { it.startsWith("GEMINI_API_KEY=") }
         ?.substringAfter("=")
         ?.trim()
+        ?.removeSurrounding("\"")
         ?: ""
 
 

@@ -53,3 +53,15 @@ interface TicketDao {
     @Query("SELECT * FROM tickets WHERE sincronizado = 0")
     suspend fun pendientes(): List<TicketEntity>
 }
+
+@Dao
+interface ChatDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(message: ChatMessageEntity)
+
+    @Query("SELECT * FROM chat_messages WHERE ticketId = :ticketId ORDER BY timestamp ASC")
+    fun observeByTicket(ticketId: String): Flow<List<ChatMessageEntity>>
+
+    @Query("SELECT * FROM chat_messages WHERE ticketId = :ticketId ORDER BY timestamp ASC")
+    suspend fun getByTicket(ticketId: String): List<ChatMessageEntity>
+}

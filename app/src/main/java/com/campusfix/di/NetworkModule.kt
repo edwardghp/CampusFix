@@ -1,6 +1,6 @@
 package com.campusfix.di
 
-import com.campusfix.data.remote.gemini.GeminiApi
+import com.campusfix.data.remote.GeminiApi
 import com.google.gson.Gson
 import dagger.Module
 import dagger.Provides
@@ -34,8 +34,9 @@ object NetworkModule {
         }
         return OkHttpClient.Builder()
             .addInterceptor(logging)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS) // la IA puede tardar en responder
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(120, TimeUnit.SECONDS) // Aumentamos a 2 min ya que el chat puede ser lento
+            .writeTimeout(60, TimeUnit.SECONDS)
             .build()
     }
 

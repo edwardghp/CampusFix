@@ -1,4 +1,4 @@
-package com.campusfix.data.remote.gemini
+package com.campusfix.data.remote
 
 import retrofit2.http.Body
 import retrofit2.http.POST
