@@ -1,0 +1,722 @@
+diff --git a/app/src/main/java/com/campusfix/data/repository/TicketRepositoryImpl.kt b/app/src/main/java/com/campusfix/data/repository/TicketRepositoryImpl.kt
+index a01a720..8657f02 100644
+--- a/app/src/main/java/com/campusfix/data/repository/TicketRepositoryImpl.kt
++++ b/app/src/main/java/com/campusfix/data/repository/TicketRepositoryImpl.kt
+@@ -158,6 +158,27 @@ class TicketRepositoryImpl @Inject constructor(
+         awaitClose { listener.remove() }
+     }
+ 
++    /**
++     * HU10 - Escucha en tiempo real TODA la coleccion de tickets para alimentar el
++     * dashboard del coordinador. Usa docToTicket() (y no toTicket()) porque este
++     * parsea los campos de la HU08 (resueltoEn, tiempoEmpleadoMinutos) necesarios
++     * para calcular tiempos de atencion y cumplimiento de SLA.
++     */
++    override fun observeAllTickets(): Flow<List<Ticket>> = callbackFlow {
++        val listener = firestore.collection(Constants.COL_TICKETS)
++            .addSnapshotListener { snap, error ->
++                if (error != null) {
++                    trySend(emptyList())
++                    return@addSnapshotListener
++                }
++                val tickets = snap?.documents?.mapNotNull { doc ->
++                    docToTicket(doc.id, doc.data ?: return@mapNotNull null)
++                } ?: emptyList()
++                trySend(tickets)
++            }
++        awaitClose { listener.remove() }
++    }
++
+     override suspend fun assignTicket(ticketId: String, technician: User): Result<Unit> = runCatching {
+         val update = mapOf(
+             "tecnicoId" to technician.uid,
+diff --git a/app/src/main/java/com/campusfix/domain/model/DashboardMetrics.kt b/app/src/main/java/com/campusfix/domain/model/DashboardMetrics.kt
+new file mode 100644
+index 0000000..f94e28f
+--- /dev/null
++++ b/app/src/main/java/com/campusfix/domain/model/DashboardMetrics.kt
+@@ -0,0 +1,83 @@
++package com.campusfix.domain.model
++
++import java.util.concurrent.TimeUnit
++
++/* ===================== HU10 - Dashboard de metricas y SLA ===================== */
++
++/**
++ * HU10 - Politica de SLA (Service Level Agreement).
++ *
++ * Define el tiempo objetivo de resolucion segun la urgencia del ticket.
++ * Se usa para dos cosas:
++ *  - Marcar como "vencido" un ticket activo cuya antiguedad supera el objetivo.
++ *  - Calcular el % de cumplimiento sobre los tickets ya resueltos.
++ *
++ * Los umbrales son parametros de negocio; se centralizan aqui para poder
++ * ajustarlos sin tocar la UI ni el ViewModel.
++ */
++object SlaPolicy {
++
++    /** Tiempo objetivo de resolucion (en horas) por nivel de urgencia. */
++    private val objetivoHoras: Map<Urgency, Long> = mapOf(
++        Urgency.ALTA to 4L,
++        Urgency.MEDIA to 24L,
++        Urgency.BAJA to 72L,
++    )
++
++    /** Objetivo de resolucion en milisegundos para una urgencia dada. */
++    fun objetivoMillis(urgencia: Urgency): Long =
++        TimeUnit.HOURS.toMillis(objetivoHoras[urgencia] ?: 24L)
++
++    /** Objetivo de resolucion en horas (para mostrarlo en la UI). */
++    fun objetivoHoras(urgencia: Urgency): Long = objetivoHoras[urgencia] ?: 24L
++
++    /** Un ticket esta "activo" si aun no fue resuelto ni cerrado. */
++    fun esActivo(estado: TicketStatus): Boolean =
++        estado == TicketStatus.ABIERTO ||
++            estado == TicketStatus.ASIGNADO ||
++            estado == TicketStatus.EN_ATENCION
++
++    /**
++     * Indica si un ticket ACTIVO esta vencido: sigue sin resolverse y ya paso
++     * mas tiempo del objetivo de SLA para su urgencia.
++     */
++    fun estaVencido(ticket: Ticket, ahora: Long = System.currentTimeMillis()): Boolean {
++        if (!esActivo(ticket.estado)) return false
++        val transcurrido = ahora - ticket.creadoEn
++        return transcurrido > objetivoMillis(ticket.urgencia)
++    }
++
++    /**
++     * Indica si un ticket RESUELTO/CERRADO cumplio el SLA: el tiempo entre su
++     * creacion y su resolucion no supero el objetivo para su urgencia.
++     */
++    fun cumplioSla(ticket: Ticket): Boolean {
++        val resuelto = ticket.resueltoEn ?: return false
++        return (resuelto - ticket.creadoEn) <= objetivoMillis(ticket.urgencia)
++    }
++}
++
++/**
++ * HU10 - Metricas agregadas que consume el dashboard del coordinador.
++ * Es un objeto de solo lectura calculado a partir de la lista de tickets.
++ */
++data class DashboardMetrics(
++    /** Tickets sin asignar (estado ABIERTO). Tarjeta "Abiertos". */
++    val abiertos: Int = 0,
++    /** Tickets activos que ya superaron su objetivo de SLA. Tarjeta "Vencidos". */
++    val vencidos: Int = 0,
++    /** Tickets en curso (ASIGNADO o EN_ATENCION). */
++    val enProceso: Int = 0,
++    /** Tickets resueltos o cerrados. */
++    val resueltos: Int = 0,
++    /** Total de tickets registrados. */
++    val total: Int = 0,
++    /** Conteo por cada estado, para el grafico de "Ticket por estado". */
++    val conteoPorEstado: Map<TicketStatus, Int> = emptyMap(),
++    /** Tiempo promedio de atencion (en minutos) sobre los tickets resueltos. */
++    val tiempoPromedioMinutos: Int = 0,
++    /** Porcentaje (0-100) de tickets resueltos que cumplieron el SLA. */
++    val cumplimientoSlaPct: Int = 0,
++    /** Tiempo promedio de atencion (minutos) por urgencia, para el grafico de barras. */
++    val tiempoPromedioPorUrgencia: Map<Urgency, Int> = emptyMap(),
++)
+diff --git a/app/src/main/java/com/campusfix/domain/repository/Repositories.kt b/app/src/main/java/com/campusfix/domain/repository/Repositories.kt
+index d360af2..178d3f4 100644
+--- a/app/src/main/java/com/campusfix/domain/repository/Repositories.kt
++++ b/app/src/main/java/com/campusfix/domain/repository/Repositories.kt
+@@ -58,6 +58,8 @@ interface TicketRepository {
+     fun observeMyTicketsRealtime(uid: String): Flow<List<Ticket>>
+     /** HU06 - Observa todos los tickets abiertos para el coordinador. */
+     fun observeOpenTickets(): Flow<List<Ticket>>
++    /** HU10 - Observa TODOS los tickets (cualquier estado) para el dashboard de metricas. */
++    fun observeAllTickets(): Flow<List<Ticket>>
+     /** HU06 - Asigna un ticket a un tecnico. */
+     suspend fun assignTicket(ticketId: String, technician: User): Result<Unit>
+     /** HU07 - Observa los tickets asignados a un tecnico (cola del tecnico), con cache en Room. */
+diff --git a/app/src/main/java/com/campusfix/domain/usecase/GetDashboardMetricsUseCase.kt b/app/src/main/java/com/campusfix/domain/usecase/GetDashboardMetricsUseCase.kt
+new file mode 100644
+index 0000000..d548751
+--- /dev/null
++++ b/app/src/main/java/com/campusfix/domain/usecase/GetDashboardMetricsUseCase.kt
+@@ -0,0 +1,76 @@
++package com.campusfix.domain.usecase
++
++import com.campusfix.domain.model.DashboardMetrics
++import com.campusfix.domain.model.SlaPolicy
++import com.campusfix.domain.model.Ticket
++import com.campusfix.domain.model.TicketStatus
++import com.campusfix.domain.model.Urgency
++import com.campusfix.domain.repository.TicketRepository
++import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.map
++import javax.inject.Inject
++
++/**
++ * HU10 - Caso de uso: obtener las metricas del dashboard del coordinador.
++ *
++ * Observa todos los tickets y los transforma en un objeto [DashboardMetrics]
++ * listo para la UI. Toda la logica de agregacion (conteos, promedios, SLA) vive
++ * aqui, en la capa de dominio, para mantenerla testeable y fuera de la vista.
++ */
++class GetDashboardMetricsUseCase @Inject constructor(
++    private val ticketRepository: TicketRepository,
++) {
++    operator fun invoke(): Flow<DashboardMetrics> =
++        ticketRepository.observeAllTickets().map { tickets -> calcular(tickets) }
++
++    /** Calcula las metricas a partir de la lista de tickets. Publico para poder testearlo. */
++    fun calcular(tickets: List<Ticket>, ahora: Long = System.currentTimeMillis()): DashboardMetrics {
++        if (tickets.isEmpty()) return DashboardMetrics()
++
++        val conteoPorEstado = TicketStatus.entries.associateWith { estado ->
++            tickets.count { it.estado == estado }
++        }
++
++        val abiertos = conteoPorEstado[TicketStatus.ABIERTO] ?: 0
++        val enProceso = (conteoPorEstado[TicketStatus.ASIGNADO] ?: 0) +
++            (conteoPorEstado[TicketStatus.EN_ATENCION] ?: 0)
++        val resueltos = (conteoPorEstado[TicketStatus.RESUELTO] ?: 0) +
++            (conteoPorEstado[TicketStatus.CERRADO] ?: 0)
++
++        val vencidos = tickets.count { SlaPolicy.estaVencido(it, ahora) }
++
++        // Tickets ya resueltos con tiempo de atencion registrado (HU08).
++        val conTiempo = tickets.mapNotNull { it.tiempoEmpleadoMinutos }
++        val tiempoPromedioMinutos =
++            if (conTiempo.isEmpty()) 0 else conTiempo.average().toInt()
++
++        // Cumplimiento de SLA sobre los tickets que ya tienen fecha de resolucion.
++        val resueltosConFecha = tickets.filter { it.resueltoEn != null }
++        val cumplimientoSlaPct = if (resueltosConFecha.isEmpty()) {
++            0
++        } else {
++            val cumplen = resueltosConFecha.count { SlaPolicy.cumplioSla(it) }
++            (cumplen * 100) / resueltosConFecha.size
++        }
++
++        // Tiempo promedio de atencion por urgencia (para el grafico de barras).
++        val tiempoPorUrgencia = Urgency.entries.associateWith { urg ->
++            val tiempos = tickets
++                .filter { it.urgencia == urg }
++                .mapNotNull { it.tiempoEmpleadoMinutos }
++            if (tiempos.isEmpty()) 0 else tiempos.average().toInt()
++        }
++
++        return DashboardMetrics(
++            abiertos = abiertos,
++            vencidos = vencidos,
++            enProceso = enProceso,
++            resueltos = resueltos,
++            total = tickets.size,
++            conteoPorEstado = conteoPorEstado,
++            tiempoPromedioMinutos = tiempoPromedioMinutos,
++            cumplimientoSlaPct = cumplimientoSlaPct,
++            tiempoPromedioPorUrgencia = tiempoPorUrgencia,
++        )
++    }
++}
+diff --git a/app/src/main/java/com/campusfix/feature/admin/DashboardScreen.kt b/app/src/main/java/com/campusfix/feature/admin/DashboardScreen.kt
+new file mode 100644
+index 0000000..3ff81d0
+--- /dev/null
++++ b/app/src/main/java/com/campusfix/feature/admin/DashboardScreen.kt
+@@ -0,0 +1,388 @@
++package com.campusfix.feature.admin
++
++import androidx.compose.foundation.Canvas
++import androidx.compose.foundation.background
++import androidx.compose.foundation.layout.*
++import androidx.compose.foundation.rememberScrollState
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.foundation.verticalScroll
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
++import androidx.compose.material3.*
++import androidx.compose.runtime.*
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.geometry.Offset
++import androidx.compose.ui.geometry.Size
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.graphics.drawscope.Stroke
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import androidx.hilt.navigation.compose.hiltViewModel
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
++import com.campusfix.domain.model.DashboardMetrics
++import com.campusfix.domain.model.SlaPolicy
++import com.campusfix.domain.model.TicketStatus
++import com.campusfix.domain.model.Urgency
++
++/**
++ * HU10 - Dashboard de metricas y SLA (solo Coordinador).
++ * Muestra el volumen de incidencias, la distribucion por estado, el tiempo
++ * promedio de atencion y el cumplimiento del SLA.
++ */
++@OptIn(ExperimentalMaterial3Api::class)
++@Composable
++fun DashboardScreen(
++    onBack: () -> Unit,
++    viewModel: DashboardViewModel = hiltViewModel(),
++) {
++    val metrics by viewModel.metrics.collectAsStateWithLifecycle()
++
++    Scaffold(
++        topBar = {
++            TopAppBar(
++                title = { Text("Dashboard") },
++                navigationIcon = {
++                    IconButton(onClick = onBack) {
++                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atras")
++                    }
++                },
++            )
++        },
++    ) { inner ->
++        Column(
++            modifier = Modifier
++                .fillMaxSize()
++                .padding(inner)
++                .verticalScroll(rememberScrollState())
++                .padding(16.dp),
++            verticalArrangement = Arrangement.spacedBy(16.dp),
++        ) {
++            Text(
++                "Coordinador de Soporte",
++                style = MaterialTheme.typography.titleLarge,
++            )
++
++            // --- Tarjetas KPI: Abiertos y Vencidos ---
++            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
++                KpiCard(
++                    titulo = "Abiertos",
++                    valor = metrics.abiertos,
++                    acento = MaterialTheme.colorScheme.primary,
++                    modifier = Modifier.weight(1f),
++                )
++                KpiCard(
++                    titulo = "Vencidos",
++                    valor = metrics.vencidos,
++                    acento = MaterialTheme.colorScheme.error,
++                    modifier = Modifier.weight(1f),
++                )
++            }
++
++            // --- Tarjetas KPI secundarias: En proceso y Resueltos ---
++            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
++                KpiCard(
++                    titulo = "En proceso",
++                    valor = metrics.enProceso,
++                    acento = MaterialTheme.colorScheme.tertiary,
++                    modifier = Modifier.weight(1f),
++                )
++                KpiCard(
++                    titulo = "Resueltos",
++                    valor = metrics.resueltos,
++                    acento = Color(0xFF2E7D32),
++                    modifier = Modifier.weight(1f),
++                )
++            }
++
++            // --- Grafico: Ticket por estado ---
++            SectionCard(titulo = "Ticket por estado") {
++                if (metrics.total == 0) {
++                    EmptyHint("Aun no hay tickets registrados.")
++                } else {
++                    Row(
++                        verticalAlignment = Alignment.CenterVertically,
++                        horizontalArrangement = Arrangement.spacedBy(16.dp),
++                    ) {
++                        EstadoDonutChart(
++                            conteoPorEstado = metrics.conteoPorEstado,
++                            total = metrics.total,
++                            modifier = Modifier.size(120.dp),
++                        )
++                        EstadoLegend(
++                            conteoPorEstado = metrics.conteoPorEstado,
++                            modifier = Modifier.weight(1f),
++                        )
++                    }
++                }
++            }
++
++            // --- Grafico: Tiempo promedio de atencion por urgencia ---
++            SectionCard(titulo = "Tiempo promedio de atencion") {
++                if (metrics.tiempoPromedioMinutos == 0) {
++                    EmptyHint("Aun no hay tickets resueltos para promediar.")
++                } else {
++                    Text(
++                        "Promedio general: ${formatoMinutos(metrics.tiempoPromedioMinutos)}",
++                        style = MaterialTheme.typography.bodyMedium,
++                        color = MaterialTheme.colorScheme.outline,
++                    )
++                    Spacer(Modifier.height(12.dp))
++                    TiempoBarChart(
++                        tiempoPorUrgencia = metrics.tiempoPromedioPorUrgencia,
++                        modifier = Modifier
++                            .fillMaxWidth()
++                            .height(140.dp),
++                    )
++                }
++            }
++
++            // --- Cumplimiento de SLA ---
++            SectionCard(titulo = "Cumplimiento de SLA") {
++                SlaCompliance(metrics = metrics)
++            }
++
++            Spacer(Modifier.height(8.dp))
++        }
++    }
++}
++
++/* ===================== Componentes de UI ===================== */
++
++@Composable
++private fun KpiCard(
++    titulo: String,
++    valor: Int,
++    acento: Color,
++    modifier: Modifier = Modifier,
++) {
++    Card(modifier = modifier) {
++        Row(Modifier.height(IntrinsicSize.Min)) {
++            Box(
++                Modifier
++                    .width(4.dp)
++                    .fillMaxHeight()
++                    .background(acento),
++            )
++            Column(Modifier.padding(16.dp)) {
++                Text(titulo, style = MaterialTheme.typography.titleLarge)
++                Spacer(Modifier.height(4.dp))
++                Text(
++                    valor.toString(),
++                    style = MaterialTheme.typography.headlineSmall,
++                    color = acento,
++                    fontWeight = FontWeight.Bold,
++                )
++            }
++        }
++    }
++}
++
++@Composable
++private fun SectionCard(titulo: String, content: @Composable ColumnScope.() -> Unit) {
++    Card(modifier = Modifier.fillMaxWidth()) {
++        Column(Modifier.padding(16.dp)) {
++            Text(titulo, style = MaterialTheme.typography.titleLarge)
++            Spacer(Modifier.height(12.dp))
++            content()
++        }
++    }
++}
++
++@Composable
++private fun EmptyHint(texto: String) {
++    Text(texto, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
++}
++
++/** Grafico de dona con la distribucion de tickets por estado. */
++@Composable
++private fun EstadoDonutChart(
++    conteoPorEstado: Map<TicketStatus, Int>,
++    total: Int,
++    modifier: Modifier = Modifier,
++) {
++    Canvas(modifier = modifier) {
++        val grosor = size.minDimension * 0.22f
++        val diametro = size.minDimension - grosor
++        val topLeft = Offset(
++            (size.width - diametro) / 2f,
++            (size.height - diametro) / 2f,
++        )
++        val arcSize = Size(diametro, diametro)
++        var startAngle = -90f
++        TicketStatus.entries.forEach { estado ->
++            val count = conteoPorEstado[estado] ?: 0
++            if (count > 0) {
++                val sweep = 360f * (count.toFloat() / total.toFloat())
++                drawArc(
++                    color = estadoColor(estado),
++                    startAngle = startAngle,
++                    sweepAngle = sweep,
++                    useCenter = false,
++                    topLeft = topLeft,
++                    size = arcSize,
++                    style = Stroke(width = grosor),
++                )
++                startAngle += sweep
++            }
++        }
++    }
++}
++
++/** Leyenda con el conteo de cada estado, junto al grafico de dona. */
++@Composable
++private fun EstadoLegend(
++    conteoPorEstado: Map<TicketStatus, Int>,
++    modifier: Modifier = Modifier,
++) {
++    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
++        TicketStatus.entries.forEach { estado ->
++            val count = conteoPorEstado[estado] ?: 0
++            Row(verticalAlignment = Alignment.CenterVertically) {
++                Box(
++                    Modifier
++                        .size(12.dp)
++                        .clip(RoundedCornerShape(3.dp))
++                        .background(estadoColor(estado)),
++                )
++                Spacer(Modifier.width(8.dp))
++                Text(
++                    estado.label,
++                    style = MaterialTheme.typography.bodyMedium,
++                    modifier = Modifier.weight(1f),
++                )
++                Text(
++                    count.toString(),
++                    style = MaterialTheme.typography.bodyMedium,
++                    fontWeight = FontWeight.SemiBold,
++                )
++            }
++        }
++    }
++}
++
++/** Grafico de barras del tiempo promedio de atencion (minutos) por urgencia. */
++@Composable
++private fun TiempoBarChart(
++    tiempoPorUrgencia: Map<Urgency, Int>,
++    modifier: Modifier = Modifier,
++) {
++    val maxValor = (tiempoPorUrgencia.values.maxOrNull() ?: 0).coerceAtLeast(1)
++    Row(
++        modifier = modifier,
++        horizontalArrangement = Arrangement.spacedBy(16.dp),
++        verticalAlignment = Alignment.Bottom,
++    ) {
++        Urgency.entries.forEach { urgencia ->
++            val minutos = tiempoPorUrgencia[urgencia] ?: 0
++            val fraccion = minutos.toFloat() / maxValor.toFloat()
++            Column(
++                modifier = Modifier
++                    .weight(1f)
++                    .fillMaxHeight(),
++                horizontalAlignment = Alignment.CenterHorizontally,
++            ) {
++                Text(
++                    if (minutos > 0) formatoMinutos(minutos) else "-",
++                    style = MaterialTheme.typography.bodySmall,
++                    color = MaterialTheme.colorScheme.outline,
++                )
++                Spacer(Modifier.height(4.dp))
++                Box(
++                    Modifier
++                        .fillMaxWidth()
++                        .weight(1f, fill = true),
++                    contentAlignment = Alignment.BottomCenter,
++                ) {
++                    Box(
++                        Modifier
++                            .fillMaxWidth(0.6f)
++                            .fillMaxHeight(fraccion.coerceIn(0.02f, 1f))
++                            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
++                            .background(urgenciaColor(urgencia)),
++                    )
++                }
++                Spacer(Modifier.height(6.dp))
++                Text(urgencia.label, style = MaterialTheme.typography.bodySmall)
++            }
++        }
++    }
++}
++
++/** Barra de progreso con el % de cumplimiento del SLA y los objetivos por urgencia. */
++@Composable
++private fun SlaCompliance(metrics: DashboardMetrics) {
++    Column {
++        Row(verticalAlignment = Alignment.CenterVertically) {
++            Text(
++                "${metrics.cumplimientoSlaPct}%",
++                style = MaterialTheme.typography.headlineSmall,
++                fontWeight = FontWeight.Bold,
++                color = colorCumplimiento(metrics.cumplimientoSlaPct),
++            )
++            Spacer(Modifier.width(8.dp))
++            Text(
++                "de tickets resueltos dentro del plazo",
++                style = MaterialTheme.typography.bodyMedium,
++                color = MaterialTheme.colorScheme.outline,
++            )
++        }
++        Spacer(Modifier.height(8.dp))
++        LinearProgressIndicator(
++            progress = { metrics.cumplimientoSlaPct / 100f },
++            modifier = Modifier
++                .fillMaxWidth()
++                .height(10.dp)
++                .clip(RoundedCornerShape(6.dp)),
++            color = colorCumplimiento(metrics.cumplimientoSlaPct),
++        )
++        Spacer(Modifier.height(12.dp))
++        Text(
++            "Objetivos de resolucion:",
++            style = MaterialTheme.typography.bodyMedium,
++            fontWeight = FontWeight.SemiBold,
++        )
++        Spacer(Modifier.height(4.dp))
++        Urgency.entries.forEach { urgencia ->
++            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
++                Text(urgencia.label, style = MaterialTheme.typography.bodyMedium)
++                Text(
++                    "${SlaPolicy.objetivoHoras(urgencia)} h",
++                    style = MaterialTheme.typography.bodyMedium,
++                    color = MaterialTheme.colorScheme.outline,
++                )
++            }
++        }
++    }
++}
++
++/* ===================== Helpers ===================== */
++
++private fun estadoColor(estado: TicketStatus): Color = when (estado) {
++    TicketStatus.ABIERTO -> Color(0xFF64748B)
++    TicketStatus.ASIGNADO -> Color(0xFF6366F1)
++    TicketStatus.EN_ATENCION -> Color(0xFF1D4ED8)
++    TicketStatus.RESUELTO -> Color(0xFF2E7D32)
++    TicketStatus.CERRADO -> Color(0xFF94A3B8)
++}
++
++private fun urgenciaColor(urgencia: Urgency): Color = when (urgencia) {
++    Urgency.ALTA -> Color(0xFFDC2626)
++    Urgency.MEDIA -> Color(0xFFF59E0B)
++    Urgency.BAJA -> Color(0xFF2E7D32)
++}
++
++private fun colorCumplimiento(pct: Int): Color = when {
++    pct >= 80 -> Color(0xFF2E7D32)
++    pct >= 50 -> Color(0xFFF59E0B)
++    else -> Color(0xFFDC2626)
++}
++
++/** Convierte minutos a un texto legible (ej. 90 -> "1h 30m"). */
++private fun formatoMinutos(min: Int): String {
++    if (min < 60) return "${min}m"
++    val horas = min / 60
++    val restante = min % 60
++    return if (restante == 0) "${horas}h" else "${horas}h ${restante}m"
++}
+diff --git a/app/src/main/java/com/campusfix/feature/admin/DashboardViewModel.kt b/app/src/main/java/com/campusfix/feature/admin/DashboardViewModel.kt
+new file mode 100644
+index 0000000..cc65857
+--- /dev/null
++++ b/app/src/main/java/com/campusfix/feature/admin/DashboardViewModel.kt
+@@ -0,0 +1,29 @@
++package com.campusfix.feature.admin
++
++import androidx.lifecycle.ViewModel
++import androidx.lifecycle.viewModelScope
++import com.campusfix.domain.model.DashboardMetrics
++import com.campusfix.domain.usecase.GetDashboardMetricsUseCase
++import dagger.hilt.android.lifecycle.HiltViewModel
++import kotlinx.coroutines.flow.SharingStarted
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.stateIn
++import javax.inject.Inject
++
++/**
++ * HU10 - ViewModel del dashboard de metricas y SLA del coordinador.
++ * Expone un flujo de [DashboardMetrics] recalculado en tiempo real cada vez
++ * que cambian los tickets en Firestore.
++ */
++@HiltViewModel
++class DashboardViewModel @Inject constructor(
++    getDashboardMetrics: GetDashboardMetricsUseCase,
++) : ViewModel() {
++
++    val metrics: StateFlow<DashboardMetrics> = getDashboardMetrics()
++        .stateIn(
++            scope = viewModelScope,
++            started = SharingStarted.WhileSubscribed(5_000),
++            initialValue = DashboardMetrics(),
++        )
++}
+diff --git a/app/src/main/java/com/campusfix/feature/home/HomeScreen.kt b/app/src/main/java/com/campusfix/feature/home/HomeScreen.kt
+index b936cb8..76e0109 100644
+--- a/app/src/main/java/com/campusfix/feature/home/HomeScreen.kt
++++ b/app/src/main/java/com/campusfix/feature/home/HomeScreen.kt
+@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.automirrored.filled.Logout
+ import androidx.compose.material.icons.filled.Add
+ import androidx.compose.material.icons.filled.Assignment
++import androidx.compose.material.icons.filled.BarChart
+ import androidx.compose.material.icons.filled.People
+ import androidx.compose.material.icons.filled.Person
+ import androidx.compose.material3.Card
+@@ -57,6 +58,7 @@ fun HomeScreen(
+     onLoggedOut: () -> Unit,
+     onGoToAssignment: () -> Unit,
+     onGoToTechManagement: () -> Unit,
++    onGoToDashboard: () -> Unit,
+     onGoToAssignedTickets: () -> Unit,
+     viewModel: HomeViewModel = hiltViewModel(),
+ ) {
+@@ -68,6 +70,9 @@ fun HomeScreen(
+                 title = { Text("CampusFix") },
+                 actions = {
+                     if (state.user.rol == UserRole.COORDINADOR) {
++                        IconButton(onClick = onGoToDashboard) {
++                            Icon(Icons.Default.BarChart, contentDescription = "Dashboard de metricas")
++                        }
+                         IconButton(onClick = onGoToTechManagement) {
+                             Icon(Icons.Default.People, contentDescription = "Gestionar técnicos")
+                         }
+diff --git a/app/src/main/java/com/campusfix/ui/navigation/CampusFixNavGraph.kt b/app/src/main/java/com/campusfix/ui/navigation/CampusFixNavGraph.kt
+index 2bf47a6..03af298 100644
+--- a/app/src/main/java/com/campusfix/ui/navigation/CampusFixNavGraph.kt
++++ b/app/src/main/java/com/campusfix/ui/navigation/CampusFixNavGraph.kt
+@@ -15,6 +15,7 @@ import com.campusfix.feature.report.QrScanScreen
+ import com.google.firebase.auth.FirebaseAuth
+ import com.campusfix.feature.report.ReportScreen
+ import com.campusfix.feature.admin.AssignmentScreen
++import com.campusfix.feature.admin.DashboardScreen
+ import com.campusfix.feature.admin.TechManagementScreen
+ import com.campusfix.feature.technician.AssignedTicketsScreen
+ import com.campusfix.feature.technician.TicketDetailScreen
+@@ -71,6 +72,7 @@ fun CampusFixNavGraph() {
+                 },
+                 onGoToAssignment = { navController.navigate(Routes.ASSIGNMENT) },
+                 onGoToTechManagement = { navController.navigate(Routes.TECH_MANAGEMENT) },
++                onGoToDashboard = { navController.navigate(Routes.DASHBOARD) },
+                 onGoToAssignedTickets = { navController.navigate(Routes.ASSIGNED_TICKETS) },
+             )
+         }
+@@ -89,6 +91,13 @@ fun CampusFixNavGraph() {
+             )
+         }
+ 
++        // HU10 - Dashboard de metricas y SLA (solo Coordinador)
++        composable(Routes.DASHBOARD) {
++            DashboardScreen(
++                onBack = { navController.popBackStack() }
++            )
++        }
++
+         // HU06 - Tickets asignados al tecnico
+         composable(Routes.ASSIGNED_TICKETS) {
+             AssignedTicketsScreen(
+diff --git a/app/src/main/java/com/campusfix/ui/navigation/Routes.kt b/app/src/main/java/com/campusfix/ui/navigation/Routes.kt
+index 8ead6d0..932d5ec 100644
+--- a/app/src/main/java/com/campusfix/ui/navigation/Routes.kt
++++ b/app/src/main/java/com/campusfix/ui/navigation/Routes.kt
+@@ -16,6 +16,8 @@ object Routes {
+     // HU06 - Asignacion de tickets (solo Coordinador)
+     const val ASSIGNMENT = "assignment"
+     const val TECH_MANAGEMENT = "tech_management"
++    // HU10 - Dashboard de metricas y SLA (solo Coordinador)
++    const val DASHBOARD = "dashboard"
+     
+     // HU06 - Tickets asignados (solo Tecnico)
+     const val ASSIGNED_TICKETS = "assigned_tickets"

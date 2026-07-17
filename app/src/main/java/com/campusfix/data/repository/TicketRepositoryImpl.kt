@@ -158,6 +158,27 @@ class TicketRepositoryImpl @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+    /**
+     * HU10 - Escucha en tiempo real TODA la coleccion de tickets para alimentar el
+     * dashboard del coordinador. Usa docToTicket() (y no toTicket()) porque este
+     * parsea los campos de la HU08 (resueltoEn, tiempoEmpleadoMinutos) necesarios
+     * para calcular tiempos de atencion y cumplimiento de SLA.
+     */
+    override fun observeAllTickets(): Flow<List<Ticket>> = callbackFlow {
+        val listener = firestore.collection(Constants.COL_TICKETS)
+            .addSnapshotListener { snap, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val tickets = snap?.documents?.mapNotNull { doc ->
+                    docToTicket(doc.id, doc.data ?: return@mapNotNull null)
+                } ?: emptyList()
+                trySend(tickets)
+            }
+        awaitClose { listener.remove() }
+    }
+
     override suspend fun assignTicket(ticketId: String, technician: User): Result<Unit> = runCatching {
         val update = mapOf(
             "tecnicoId" to technician.uid,

@@ -58,6 +58,8 @@ interface TicketRepository {
     fun observeMyTicketsRealtime(uid: String): Flow<List<Ticket>>
     /** HU06 - Observa todos los tickets abiertos para el coordinador. */
     fun observeOpenTickets(): Flow<List<Ticket>>
+    /** HU10 - Observa TODOS los tickets (cualquier estado) para el dashboard de metricas. */
+    fun observeAllTickets(): Flow<List<Ticket>>
     /** HU06 - Asigna un ticket a un tecnico. */
     suspend fun assignTicket(ticketId: String, technician: User): Result<Unit>
     /** HU07 - Observa los tickets asignados a un tecnico (cola del tecnico), con cache en Room. */
